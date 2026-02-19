@@ -1,930 +1,684 @@
 <!doctype html>
-
 <html lang="en">
-
 <head>
-
   <meta charset="utf-8" />
-
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-
   <title>Office Flight Wall</title>
 
- 
-
-  <!-- Leaflet (map) -->
-
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
- 
-
   <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#0b0f14;
+      --line:rgba(255,255,255,0.08);
+      --text:#e8eef7;
+      --muted:rgba(232,238,247,0.78);
+      --card:rgba(255,255,255,0.04);
+      --cardLine:rgba(255,255,255,0.06);
 
-    html, body { height: 100%; margin: 0; background: #0b0f14; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      /* theatre */
+      --dimmer: 0.30;     /* 0..0.9 */
+      --night: 1;         /* 0/1 toggle */
+      --sweepOn: 1;       /* 0/1 toggle */
+      --sweepSpeed: 6.5s; /* rotate speed */
+    }
 
-    #app { height: 100%; display: grid; grid-template-columns: 1fr 360px; }
-
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #app { height: 100%; display: grid; grid-template-columns: 1fr 420px; }
+    #mapWrap { position: relative; height: 100%; }
     #map { height: 100%; }
 
+    /* Dimmer / night filter (works on any tile layer) */
+    #mapTint {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background: rgba(0,0,0,var(--dimmer));
+      mix-blend-mode: multiply;
+      transition: opacity 200ms;
+      z-index: 450;
+    }
+    #mapNight {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      opacity: calc(var(--night) * 0.35);
+      filter: saturate(0.85) contrast(1.05);
+      background: rgba(10, 30, 20, 1);
+      mix-blend-mode: color;
+      z-index: 451;
+    }
+
+    /* Fake radar sweep */
+    #radarSweep {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 220vmax;
+      height: 220vmax;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 500;
+      opacity: calc(var(--sweepOn) * 0.35);
+      /* A wedge of light + fading tail */
+      background:
+        conic-gradient(
+          from 0deg,
+          rgba(0,255,180,0.00) 0deg,
+          rgba(0,255,180,0.00) 330deg,
+          rgba(0,255,180,0.12) 345deg,
+          rgba(0,255,180,0.30) 355deg,
+          rgba(0,255,180,0.00) 360deg
+        );
+      animation: sweep var(--sweepSpeed) linear infinite;
+      filter: blur(0.4px);
+    }
+    @keyframes sweep {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to   { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
     #side {
-
-      border-left: 1px solid rgba(255,255,255,0.08);
-
-      background: #0b0f14;
-
+      border-left: 1px solid var(--line);
+      background: var(--panel);
       display: flex;
-
       flex-direction: column;
-
-      min-width: 320px;
-
+      min-width: 360px;
     }
-
-    .topbar {
-
-      padding: 14px 14px 10px;
-
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-
-    }
-
-    .title { font-size: 16px; font-weight: 700; margin: 0 0 6px; letter-spacing: 0.2px; }
-
-    .meta { font-size: 12px; opacity: 0.85; line-height: 1.4; }
+    .topbar { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
+    .title { font-size: 16px; font-weight: 800; margin: 0 0 8px; letter-spacing: 0.2px; }
+    .meta { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
     .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-
     .pill {
-
       font-size: 12px;
-
       padding: 6px 8px;
-
       border-radius: 999px;
-
       background: rgba(255,255,255,0.06);
-
       border: 1px solid rgba(255,255,255,0.08);
-
     }
 
     #warning {
-
       display: none;
-
       padding: 12px 14px;
-
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-
+      border-bottom: 1px solid var(--line);
       background: rgba(255, 64, 64, 0.18);
-
     }
-
     #warning strong { display: block; font-size: 14px; }
-
     #warning span { display: block; font-size: 12px; opacity: 0.9; margin-top: 2px; }
 
-    #list {
-
-      padding: 10px 10px 14px;
-
-      overflow: auto;
-
-      flex: 1;
-
-    }
-
-    .row {
-
-      padding: 10px;
-
-      border-radius: 10px;
-
-      background: rgba(255,255,255,0.04);
-
-      border: 1px solid rgba(255,255,255,0.06);
-
-      margin: 8px 4px;
-
-    }
-
-    .row h4 {
-
-      margin: 0 0 6px;
-
-      font-size: 13px;
-
-      letter-spacing: 0.2px;
-
-      display: flex;
-
-      justify-content: space-between;
-
-      gap: 10px;
-
-    }
-
-    .row .muted { opacity: 0.75; font-weight: 600; }
-
-    .row .grid {
-
+    /* Controls */
+    #controls {
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid var(--line);
       display: grid;
-
-      grid-template-columns: 1fr 1fr;
-
-      gap: 6px 10px;
-
+      gap: 10px;
+    }
+    .ctrlRow {
+      background: var(--card);
+      border: 1px solid var(--cardLine);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .ctrlRow h4{
+      margin: 0 0 8px;
       font-size: 12px;
-
-      opacity: 0.9;
-
+      letter-spacing: 0.2px;
+      display:flex; justify-content:space-between; align-items:center;
     }
-
-    .badge {
-
-      padding: 2px 6px;
-
-      border-radius: 999px;
-
+    .ctrlRow h4 span { opacity: 0.8; font-weight: 700; }
+    .ctrlRow .grid {
+      display: grid;
+      grid-template-columns: 1fr 92px;
+      gap: 8px;
+      align-items: center;
+    }
+    input[type="range"]{ width:100%; }
+    input[type="number"]{
+      width: 92px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.25);
+      color: var(--text);
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+    .btnRow { display:flex; gap:8px; flex-wrap:wrap; }
+    button, .toggle {
+      border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.12);
-
       background: rgba(255,255,255,0.06);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    button:hover{ background: rgba(255,255,255,0.10); }
+    button.primary{
+      border-color: rgba(0,255,180,0.35);
+    }
 
+    #list { padding: 10px 10px 14px; overflow: auto; flex: 1; }
+    .row {
+      padding: 10px;
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--cardLine);
+      margin: 8px 4px;
+    }
+    .row h4 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      letter-spacing: 0.2px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .row .muted { opacity: 0.7; font-weight: 700; }
+    .row .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    .badge {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
       font-size: 11px;
-
       white-space: nowrap;
-
     }
-
     .badge.warn {
-
       border-color: rgba(255,80,80,0.45);
-
       background: rgba(255,80,80,0.18);
-
     }
 
- 
-
-    /* Make it look decent on a wall */
-
-    @media (max-width: 900px) {
-
+    @media (max-width: 1000px) {
       #app { grid-template-columns: 1fr; }
-
-      #side { min-width: 0; height: 40vh; }
-
+      #side { height: 46vh; min-width: 0; }
     }
-
   </style>
-
 </head>
 
- 
-
 <body>
-
   <div id="app">
-
-    <div id="map"></div>
-
- 
+    <div id="mapWrap">
+      <div id="map"></div>
+      <div id="mapTint"></div>
+      <div id="mapNight"></div>
+      <div id="radarSweep"></div>
+    </div>
 
     <aside id="side">
-
       <div class="topbar">
-
         <p class="title">Head Office Air Picture (for show)</p>
-
         <div class="meta">
-
-          Centre: <span id="centre"></span><br>
-
-          Filters: &lt; 1000 ft, within 10 km, warning within 5 km<br>
-
-          Polling: 10s between 08:30–17:30
-
+          Centre: <span id="centre">—</span><br>
+          Filters: altitude, range, warning ring configurable<br>
+          Source: adsb.lol via corsproxy (POC)
         </div>
-
- 
 
         <div class="pillrow">
-
           <div class="pill">Visible: <strong id="count">0</strong></div>
-
-          <div class="pill">Within 5 km: <strong id="countWarn">0</strong></div>
-
+          <div class="pill">Within warn: <strong id="countWarn">0</strong></div>
           <div class="pill">Last update: <strong id="last">—</strong></div>
-
           <div class="pill">Status: <strong id="status">—</strong></div>
+        </div>
+      </div>
 
+      <div id="controls">
+        <div class="ctrlRow">
+          <h4>Location <span id="locLabel">Head Office</span></h4>
+          <div class="btnRow">
+            <button id="btnHQ" class="primary">Use Head Office</button>
+            <button id="btnMe">Use Current Location</button>
+          </div>
+          <div class="meta" style="margin-top:8px;">
+            Current location needs browser permission. If denied, it stays on Head Office.
+          </div>
         </div>
 
-      </div>
+        <div class="ctrlRow">
+          <h4>Max altitude (ft) <span id="altVal">1000</span></h4>
+          <div class="grid">
+            <input id="altRange" type="range" min="0" max="5000" step="50" value="1000">
+            <input id="altNum" type="number" min="0" max="5000" step="50" value="1000">
+          </div>
+        </div>
 
- 
+        <div class="ctrlRow">
+          <h4>Show range (km) <span id="rangeVal">10</span></h4>
+          <div class="grid">
+            <input id="rangeRange" type="range" min="1" max="50" step="1" value="10">
+            <input id="rangeNum" type="number" min="1" max="50" step="1" value="10">
+          </div>
+        </div>
+
+        <div class="ctrlRow">
+          <h4>Warning ring (km) <span id="warnVal">5</span></h4>
+          <div class="grid">
+            <input id="warnRange" type="range" min="1" max="25" step="1" value="5">
+            <input id="warnNum" type="number" min="1" max="25" step="1" value="5">
+          </div>
+          <div class="meta" style="margin-top:8px;">Auto-clamped so warning ring never exceeds show range.</div>
+        </div>
+
+        <div class="ctrlRow">
+          <h4>Visuals</h4>
+          <div class="btnRow">
+            <button id="btnNight" class="primary">Night mode: ON</button>
+            <button id="btnSweep" class="primary">Radar sweep: ON</button>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="meta" style="margin-bottom:6px;">Map dimmer</div>
+            <input id="dimRange" type="range" min="0" max="90" step="1" value="30">
+          </div>
+        </div>
+      </div>
 
       <div id="warning">
-
-        <strong>WARNING: Aircraft within 5 km</strong>
-
+        <strong>WARNING: Aircraft within warning ring</strong>
         <span id="warningDetail">—</span>
-
       </div>
 
- 
-
       <div id="list"></div>
-
     </aside>
-
   </div>
 
- 
-
   <script>
-
-    // ====== CONFIG ======
-
-    const HQ = { lat: 53.10643205468523, lon: -1.3190169903418059 };
-
- 
+    // ====== BASE CONFIG ======
+    const HQ_FIXED = { lat: 53.10643205468523, lon: -1.3190169903418059 };
+    let centre = { ...HQ_FIXED };
+    let usingGeo = false;
 
     const POLL_MS = 10 * 1000;
 
-    const ALT_MAX_FT = 1000;
+    // Office hours (local time). Set to null to run 24/7.
+    const OFFICE_HOURS = { startH: 8, startM: 30, endH: 17, endM: 30 };
 
- 
-
-    const RADIUS_SHOW_KM = 10;
-
-    const RADIUS_WARN_KM = 5;
-
- 
+    // Defaults (user adjustable)
+    let ALT_MAX_FT = 1000;
+    let RADIUS_SHOW_KM = 10;
+    let RADIUS_WARN_KM = 5;
 
     // adsb.lol expects radius in nautical miles for /v2/point/{lat}/{lon}/{radius_nm}
+    function kmToNm(km){ return km / 1.852; }
 
-    // 10 km ≈ 5.4 nm, we use 6 nm to comfortably cover the ring.
-
-    const API_RADIUS_NM = 6;
-
-    const API_URL = `https://api.adsb.lol/v2/point/${HQ.lat}/${HQ.lon}/${API_RADIUS_NM}`;
-
- 
-
-    // Office hours
-
-    const START_H = 8, START_M = 30;
-
-    const END_H   = 17, END_M   = 30;
-
- 
-
-    // Map defaults
-
-    const MAP_ZOOM = 12;
-
- 
-
-    // ====== HELPERS ======
+    function buildApiUrl() {
+      // Pad a bit so the API query radius comfortably covers the display ring
+      const paddedKm = Math.min(80, RADIUS_SHOW_KM * 1.25);
+      const rNm = Math.max(2, Math.ceil(kmToNm(paddedKm)));
+      const url = `https://api.adsb.lol/v2/point/${centre.lat}/${centre.lon}/${rNm}`;
+      // 30-second CORS fix: proxy it
+      return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    }
 
     function nowWithinWindow(d = new Date()) {
-
+      if (!OFFICE_HOURS) return true;
       const mins = d.getHours() * 60 + d.getMinutes();
-
-      const start = START_H * 60 + START_M;
-
-      const end   = END_H * 60 + END_M;
-
+      const start = OFFICE_HOURS.startH * 60 + OFFICE_HOURS.startM;
+      const end   = OFFICE_HOURS.endH   * 60 + OFFICE_HOURS.endM;
       return mins >= start && mins <= end;
-
     }
-
- 
 
     function toRad(deg) { return deg * Math.PI / 180; }
-
- 
-
-    // Haversine distance in km
-
     function distanceKm(lat1, lon1, lat2, lon2) {
-
       const R = 6371;
-
       const dLat = toRad(lat2 - lat1);
-
       const dLon = toRad(lon2 - lon1);
-
       const a =
-
         Math.sin(dLat/2) * Math.sin(dLat/2) +
-
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-
         Math.sin(dLon/2) * Math.sin(dLon/2);
-
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
       return R * c;
-
     }
-
- 
-
-    // Heading string
 
     function headingText(track) {
-
       if (track == null || Number.isNaN(track)) return "—";
-
       const t = (Math.round(track) % 360 + 360) % 360;
-
       return `${t}°`;
-
     }
-
- 
-
-    function fmtAlt(ft) {
-
-      if (ft == null || Number.isNaN(ft)) return "—";
-
-      return `${Math.round(ft)} ft`;
-
-    }
-
- 
-
-    function fmtKm(km) {
-
-      if (km == null || Number.isNaN(km)) return "—";
-
-      return `${km.toFixed(1)} km`;
-
-    }
-
- 
-
+    function fmtAlt(ft) { return (ft == null || Number.isNaN(ft)) ? "—" : `${Math.round(ft)} ft`; }
+    function fmtKm(km)  { return (km == null || Number.isNaN(km)) ? "—" : `${km.toFixed(1)} km`; }
     function safeStr(v) {
-
       const s = (v ?? "").toString().trim();
-
       return s.length ? s : "—";
-
     }
-
- 
-
-    // Try to extract altitude in feet from different possible field names
 
     function pickAltitudeFt(a) {
-
-      // Common fields across ADS-B datasets:
-
-      // alt_baro, alt_geom (feet), altitude (feet)
-
-      const cand = [
-
-        a.alt_baro, a.alt_geom, a.altitude,
-
-        a.baro_altitude, a.geo_altitude
-
-      ];
-
+      const cand = [a.alt_baro, a.alt_geom, a.altitude, a.baro_altitude, a.geo_altitude];
       for (const v of cand) {
-
         const n = Number(v);
-
         if (Number.isFinite(n)) return n;
-
       }
-
       return null;
-
     }
-
- 
-
-    // Try to extract lat/lon from different possible field names
-
     function pickLatLon(a) {
-
       const lat = Number(a.lat ?? a.latitude);
-
       const lon = Number(a.lon ?? a.lng ?? a.longitude);
-
       if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
-
       return null;
-
     }
 
- 
-
-    // ====== UI / MAP ======
-
-    document.getElementById("centre").textContent = `${HQ.lat.toFixed(6)}, ${HQ.lon.toFixed(6)}`;
-
- 
-
-    const map = L.map("map", { zoomControl: false }).setView([HQ.lat, HQ.lon], MAP_ZOOM);
-
- 
-
-    // OpenStreetMap tiles (fine for internal office use, don’t hammer it)
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-
-      maxZoom: 19,
-
-      attribution: "&copy; OpenStreetMap contributors"
-
-    }).addTo(map);
-
- 
-
-    // Rings
-
-    const ring10 = L.circle([HQ.lat, HQ.lon], {
-
-      radius: RADIUS_SHOW_KM * 1000,
-
-      weight: 2,
-
-      opacity: 0.7,
-
-      fillOpacity: 0.05
-
-    }).addTo(map);
-
- 
-
-    const ring5 = L.circle([HQ.lat, HQ.lon], {
-
-      radius: RADIUS_WARN_KM * 1000,
-
-      weight: 2,
-
-      opacity: 0.9,
-
-      fillOpacity: 0.08
-
-    }).addTo(map);
-
- 
-
-    // HQ marker
-
-    const hqMarker = L.circleMarker([HQ.lat, HQ.lon], {
-
-      radius: 6,
-
-      weight: 2,
-
-      opacity: 1,
-
-      fillOpacity: 0.9
-
-    }).addTo(map).bindPopup("Head Office");
-
- 
-
-    // Aircraft markers stored by hex/icao
-
-    const markers = new Map();
-
- 
-
-    function setStatus(text) {
-
-      document.getElementById("status").textContent = text;
-
-    }
-
- 
-
+    // ====== UI ======
+    const el = (id) => document.getElementById(id);
+    function setStatus(text) { el("status").textContent = text; }
     function setLastUpdate(d = new Date()) {
-
       const hh = String(d.getHours()).padStart(2, "0");
-
       const mm = String(d.getMinutes()).padStart(2, "0");
-
       const ss = String(d.getSeconds()).padStart(2, "0");
-
-      document.getElementById("last").textContent = `${hh}:${mm}:${ss}`;
-
+      el("last").textContent = `${hh}:${mm}:${ss}`;
     }
 
- 
+    function updateCentreLabel() {
+      el("centre").textContent = `${centre.lat.toFixed(6)}, ${centre.lon.toFixed(6)}${usingGeo ? " (you)" : " (HQ)"}`;
+      el("locLabel").textContent = usingGeo ? "Current location" : "Head Office";
+    }
 
+    function clampWarn() {
+      if (RADIUS_WARN_KM > RADIUS_SHOW_KM) RADIUS_WARN_KM = RADIUS_SHOW_KM;
+      // reflect in UI
+      el("warnRange").max = String(Math.max(1, Math.floor(RADIUS_SHOW_KM)));
+      el("warnNum").max = String(Math.max(1, Math.floor(RADIUS_SHOW_KM)));
+      el("warnRange").value = String(RADIUS_WARN_KM);
+      el("warnNum").value = String(RADIUS_WARN_KM);
+      el("warnVal").textContent = String(RADIUS_WARN_KM);
+    }
+
+    // ====== MAP ======
+    updateCentreLabel();
+
+    const map = L.map("map", { zoomControl: false }).setView([centre.lat, centre.lon], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const ringShow = L.circle([centre.lat, centre.lon], { radius: RADIUS_SHOW_KM * 1000, weight: 2, opacity: 0.7, fillOpacity: 0.05 }).addTo(map);
+    const ringWarn = L.circle([centre.lat, centre.lon], { radius: RADIUS_WARN_KM * 1000, weight: 2, opacity: 0.9, fillOpacity: 0.08 }).addTo(map);
+    const centreMarker = L.circleMarker([centre.lat, centre.lon], { radius: 6, weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+
+    function refreshRings() {
+      ringShow.setLatLng([centre.lat, centre.lon]).setRadius(RADIUS_SHOW_KM * 1000);
+      ringWarn.setLatLng([centre.lat, centre.lon]).setRadius(RADIUS_WARN_KM * 1000);
+      centreMarker.setLatLng([centre.lat, centre.lon]);
+      map.panTo([centre.lat, centre.lon], { animate: true, duration: 0.5 });
+    }
+
+    // aircraft markers by key
+    const markers = new Map();
     function clearMarkersNotIn(seenKeys) {
-
       for (const [key, m] of markers.entries()) {
-
-        if (!seenKeys.has(key)) {
-
-          map.removeLayer(m);
-
-          markers.delete(key);
-
-        }
-
+        if (!seenKeys.has(key)) { map.removeLayer(m); markers.delete(key); }
       }
-
     }
 
- 
-
+    // ====== LIST + WARNING ======
     function renderList(items) {
-
-      const list = document.getElementById("list");
-
+      const list = el("list");
       if (!items.length) {
-
-        list.innerHTML = `<div class="row"><h4>No aircraft matching filters <span class="muted">—</span></h4>
-
-          <div class="grid">
-
-            <div>Reason</div><div>Nothing under ${ALT_MAX_FT} ft within ${RADIUS_SHOW_KM} km</div>
-
+        list.innerHTML = `<div class="row"><h4>No matching aircraft <span class="muted">—</span></h4>
+          <div class="grid2">
+            <div>Filter</div><div>&lt; ${ALT_MAX_FT} ft, within ${RADIUS_SHOW_KM} km</div>
           </div></div>`;
-
         return;
-
       }
-
- 
 
       list.innerHTML = items.map(x => {
-
-        const warnBadge = x.distanceKm <= RADIUS_WARN_KM ? `<span class="badge warn">within 5 km</span>` : `<span class="badge">within 10 km</span>`;
-
+        const warnBadge = x.distanceKm <= RADIUS_WARN_KM ? `<span class="badge warn">warning</span>` : `<span class="badge">show</span>`;
         return `
-
           <div class="row">
-
             <h4>
-
               <span>${safeStr(x.callsign)} <span class="muted">${safeStr(x.hex)}</span></span>
-
               ${warnBadge}
-
             </h4>
-
-            <div class="grid">
-
+            <div class="grid2">
               <div>Distance</div><div>${fmtKm(x.distanceKm)}</div>
-
               <div>Altitude</div><div>${fmtAlt(x.altFt)}</div>
-
               <div>Heading</div><div>${headingText(x.track)}</div>
-
               <div>Speed</div><div>${x.speedKt != null ? `${Math.round(x.speedKt)} kt` : "—"}</div>
-
             </div>
-
           </div>
-
         `;
-
       }).join("");
-
     }
 
- 
+    function setWarning(itemsWithinWarn) {
+      const warning = el("warning");
+      const detail = el("warningDetail");
 
-    function setWarning(itemsWithin5) {
-
-      const warning = document.getElementById("warning");
-
-      const detail = document.getElementById("warningDetail");
-
- 
-
-      if (!itemsWithin5.length) {
-
+      if (!itemsWithinWarn.length) {
         warning.style.display = "none";
-
         detail.textContent = "—";
-
         return;
-
       }
-
- 
 
       warning.style.display = "block";
-
-      // Short readable summary
-
-      const summary = itemsWithin5
-
+      const summary = itemsWithinWarn
         .slice(0, 3)
-
         .map(a => `${safeStr(a.callsign)} (${fmtAlt(a.altFt)}, ${fmtKm(a.distanceKm)})`)
-
         .join(", ");
 
- 
-
-      detail.textContent = itemsWithin5.length > 3
-
-        ? `${summary} +${itemsWithin5.length - 3} more`
-
-        : summary;
-
+      detail.textContent = itemsWithinWarn.length > 3 ? `${summary} +${itemsWithinWarn.length - 3} more` : summary;
     }
 
- 
-
-    // ====== DATA FETCH + FILTER ======
-
+    // ====== DATA ======
     async function fetchAircraft() {
-
       if (!nowWithinWindow()) {
-
         setStatus("Paused (outside hours)");
-
         return { aircraft: [], paused: true };
-
       }
-
- 
-
       setStatus("Updating…");
-
- 
-
-const res = await fetch(
-  `https://corsproxy.io/?${API_URL}`,
-  { cache: "no-store" }
-);
-
+      const url = buildApiUrl();
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
       const data = await res.json();
-
- 
-
-      // adsb.lol tends to return aircraft list under "ac" (common) but we handle variants
-
       const aircraft = data.ac ?? data.aircraft ?? data?.result ?? [];
-
       return { aircraft, paused: false };
-
     }
-
- 
 
     function normaliseAndFilter(rawAircraft) {
-
       const items = [];
-
- 
-
       for (const a of rawAircraft) {
-
         const pos = pickLatLon(a);
-
         if (!pos) continue;
 
- 
-
         const altFt = pickAltitudeFt(a);
-
         if (altFt == null) continue;
-
         if (altFt > ALT_MAX_FT) continue;
 
- 
-
-        const dKm = distanceKm(HQ.lat, HQ.lon, pos.lat, pos.lon);
-
+        const dKm = distanceKm(centre.lat, centre.lon, pos.lat, pos.lon);
         if (dKm > RADIUS_SHOW_KM) continue;
 
- 
-
         const hex = (a.hex ?? a.icao ?? a.addr ?? "").toString().trim().toUpperCase() || `${pos.lat},${pos.lon}`;
-
         const callsign = (a.flight ?? a.callsign ?? a.call ?? "").toString().trim();
-
- 
-
         const track = Number(a.track ?? a.trk ?? a.heading);
-
         const speedKt = Number(a.gs ?? a.spd ?? a.speed ?? a.speed_kts);
-
-        const isSpeedFinite = Number.isFinite(speedKt) ? speedKt : null;
-
- 
-
         items.push({
-
           key: hex,
-
           hex,
-
           callsign,
-
           lat: pos.lat,
-
           lon: pos.lon,
-
           altFt,
-
           distanceKm: dKm,
-
           track: Number.isFinite(track) ? track : null,
-
-          speedKt: isSpeedFinite
-
+          speedKt: Number.isFinite(speedKt) ? speedKt : null
         });
-
       }
-
- 
-
-      // Sort nearest first (looks tidy on a wall)
-
       items.sort((a, b) => a.distanceKm - b.distanceKm);
-
       return items;
-
     }
-
- 
 
     function upsertMarkers(items) {
-
       const seen = new Set();
-
- 
-
       for (const x of items) {
-
         seen.add(x.key);
-
- 
-
         const isWarn = x.distanceKm <= RADIUS_WARN_KM;
 
- 
-
-        // Simple circle marker
-
-        const existing = markers.get(x.key);
-
         const popupHtml = `
-
           <div style="font-family:system-ui,Segoe UI,Roboto,Arial; font-size:12px;">
-
-            <div style="font-weight:700; margin-bottom:4px;">${safeStr(x.callsign)} <span style="opacity:0.7;">${safeStr(x.hex)}</span></div>
-
+            <div style="font-weight:800; margin-bottom:4px;">${safeStr(x.callsign)} <span style="opacity:0.7;">${safeStr(x.hex)}</span></div>
             <div>Alt: ${fmtAlt(x.altFt)}</div>
-
             <div>Dist: ${fmtKm(x.distanceKm)}</div>
-
             <div>Hdg: ${headingText(x.track)}</div>
-
           </div>
-
         `;
 
- 
-
+        const existing = markers.get(x.key);
         if (existing) {
-
           existing.setLatLng([x.lat, x.lon]);
-
           existing.setPopupContent(popupHtml);
-
-          existing.setStyle({
-
-            weight: 2,
-
-            opacity: 1,
-
-            fillOpacity: 0.9
-
-          });
-
-          // swap “look” by toggling classless style changes
-
-          if (isWarn) existing.setRadius(7);
-
-          else existing.setRadius(5);
-
+          existing.setRadius(isWarn ? 7 : 5);
         } else {
-
           const m = L.circleMarker([x.lat, x.lon], {
-
             radius: isWarn ? 7 : 5,
-
             weight: 2,
-
             opacity: 1,
-
             fillOpacity: 0.9
-
           }).addTo(map).bindPopup(popupHtml);
-
           markers.set(x.key, m);
-
         }
-
       }
-
- 
-
       clearMarkersNotIn(seen);
-
     }
-
- 
-
-    // ====== MAIN LOOP ======
 
     async function updateOnce() {
-
       try {
-
         const { aircraft, paused } = await fetchAircraft();
-
- 
-
-        if (paused) {
-
-          // Don’t clear markers, just leave the last picture up
-
-          document.getElementById("status").textContent = "Paused (outside hours)";
-
-          return;
-
-        }
-
- 
+        if (paused) return;
 
         const items = normaliseAndFilter(aircraft);
+        el("count").textContent = String(items.length);
 
- 
+        const withinWarn = items.filter(x => x.distanceKm <= RADIUS_WARN_KM);
+        el("countWarn").textContent = String(withinWarn.length);
 
-        // Update UI
-
-        document.getElementById("count").textContent = String(items.length);
-
-        const within5 = items.filter(x => x.distanceKm <= RADIUS_WARN_KM);
-
-        document.getElementById("countWarn").textContent = String(within5.length);
-
- 
-
-        setWarning(within5);
-
+        setWarning(withinWarn);
         renderList(items);
-
         upsertMarkers(items);
 
- 
-
         setLastUpdate(new Date());
-
         setStatus("Live");
-
       } catch (err) {
-
         setStatus(`Error: ${err.message}`);
-
       }
-
     }
 
- 
+    // ====== CONTROLS WIRING ======
+    function bindRangeAndNumber(rangeEl, numEl, onChange) {
+      const syncFromRange = () => { numEl.value = rangeEl.value; onChange(Number(rangeEl.value)); };
+      const syncFromNum   = () => { rangeEl.value = numEl.value; onChange(Number(numEl.value)); };
+      rangeEl.addEventListener("input", syncFromRange);
+      numEl.addEventListener("change", syncFromNum);
+    }
 
-    // Kick off immediately, then every POLL_MS, but still respects the time window
+    // Altitude
+    bindRangeAndNumber(el("altRange"), el("altNum"), (v) => {
+      ALT_MAX_FT = Math.max(0, Math.min(5000, v));
+      el("altVal").textContent = String(ALT_MAX_FT);
+      updateOnce();
+    });
 
+    // Show range
+    bindRangeAndNumber(el("rangeRange"), el("rangeNum"), (v) => {
+      RADIUS_SHOW_KM = Math.max(1, Math.min(50, v));
+      el("rangeVal").textContent = String(RADIUS_SHOW_KM);
+      clampWarn();
+      refreshRings();
+      updateOnce();
+    });
+
+    // Warn range
+    bindRangeAndNumber(el("warnRange"), el("warnNum"), (v) => {
+      RADIUS_WARN_KM = Math.max(1, Math.min(25, v));
+      clampWarn();
+      refreshRings();
+      updateOnce();
+    });
+
+    // Dimmer slider (0..90)
+    el("dimRange").addEventListener("input", () => {
+      const v = Number(el("dimRange").value); // 0..90
+      document.documentElement.style.setProperty("--dimmer", (v/100).toFixed(2));
+    });
+
+    // Night mode toggle
+    let nightOn = true;
+    el("btnNight").addEventListener("click", () => {
+      nightOn = !nightOn;
+      document.documentElement.style.setProperty("--night", nightOn ? "1" : "0");
+      el("btnNight").textContent = `Night mode: ${nightOn ? "ON" : "OFF"}`;
+      el("btnNight").classList.toggle("primary", nightOn);
+    });
+
+    // Sweep toggle
+    let sweepOn = true;
+    el("btnSweep").addEventListener("click", () => {
+      sweepOn = !sweepOn;
+      document.documentElement.style.setProperty("--sweepOn", sweepOn ? "1" : "0");
+      el("btnSweep").textContent = `Radar sweep: ${sweepOn ? "ON" : "OFF"}`;
+      el("btnSweep").classList.toggle("primary", sweepOn);
+    });
+
+    // Location buttons
+    function setCentre(lat, lon, geoFlag) {
+      centre = { lat, lon };
+      usingGeo = geoFlag;
+      updateCentreLabel();
+      refreshRings();
+      updateOnce();
+    }
+
+    el("btnHQ").addEventListener("click", () => {
+      el("btnHQ").classList.add("primary");
+      el("btnMe").classList.remove("primary");
+      setCentre(HQ_FIXED.lat, HQ_FIXED.lon, false);
+    });
+
+    el("btnMe").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        setStatus("Geolocation not supported");
+        return;
+      }
+      setStatus("Requesting location…");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          el("btnMe").classList.add("primary");
+          el("btnHQ").classList.remove("primary");
+          setCentre(pos.coords.latitude, pos.coords.longitude, true);
+        },
+        (err) => {
+          setStatus(`Location denied (${err.code})`);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    });
+
+    // Initialise visual defaults
+    document.documentElement.style.setProperty("--dimmer", (Number(el("dimRange").value)/100).toFixed(2));
+    document.documentElement.style.setProperty("--night", "1");
+    document.documentElement.style.setProperty("--sweepOn", "1");
+
+    // Clamp warning range against initial show range
+    clampWarn();
+
+    // Start
     updateOnce();
-
     setInterval(updateOnce, POLL_MS);
 
- 
-
-    // Also re-check status once a minute so it flips cleanly at 08:30/17:30
-
+    // Office-hours status flip once a minute
     setInterval(() => {
-
       if (!nowWithinWindow()) setStatus("Paused (outside hours)");
-
     }, 60 * 1000);
-
   </script>
-
 </body>
-
 </html>
