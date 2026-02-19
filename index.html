@@ -662,7 +662,10 @@
 
  
 
-      const res = await fetch(API_URL, { cache: "no-store" });
+const res = await fetch(
+  `https://corsproxy.io/?${API_URL}`,
+  { cache: "no-store" }
+);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
