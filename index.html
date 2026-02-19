@@ -3,846 +3,971 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Office Flight Wall</title>
+  <title>Head Office Air Picture (for show)</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
   <style>
     :root{
-      --bg:#07090c;
-      --panel:#07090c;
-      --line:rgba(255,255,255,0.08);
-      --text:#e8eef7;
-      --muted:rgba(232,238,247,0.78);
-      --card:rgba(255,255,255,0.04);
-      --cardLine:rgba(255,255,255,0.06);
+      --bg: #050608;
+      --panel: rgba(10,12,16,0.88);
+      --panel2: rgba(10,12,16,0.74);
+      --text: #e7eefc;
+      --muted: rgba(231,238,252,0.70);
+      --border: rgba(255,255,255,0.12);
 
-      /* theatre look */
-      --dimmer: 0.55;     /* heavier default */
-      --night: 1;
-      --sweepOn: 1;
-      --sweepSpeed: 6.5s;
-
-      /* colours */
-      --green: rgba(120, 255, 120, 1);
-      --yellow: rgba(255, 225, 90, 1);
-      --red: rgba(255, 70, 70, 1);
-      --trailGreen: rgba(120,255,120,1);
+      --green: #39ff14;   /* bright green */
+      --red:   #ff2b2b;   /* bright red */
+      --yellow:#ffe600;   /* bright yellow */
+      --cyan:  #2dd8ff;
     }
 
-    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-    #app { height: 100%; display: grid; grid-template-columns: 1fr 460px; }
-    #mapWrap { position: relative; height: 100%; }
-    #map { height: 100%; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      overflow: hidden;
+    }
 
-    /* Stronger dimmer */
-    #mapTint {
-      position: absolute; inset: 0;
+    #map {
+      position: absolute;
+      inset: 0;
+      background: #000;
+    }
+
+    /* Extra dim overlay to make the map properly dark */
+    .map-dimmer {
       pointer-events: none;
-      background: rgba(0,0,0,var(--dimmer));
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
       mix-blend-mode: multiply;
-      z-index: 450;
+      z-index: 600;
+      opacity: 1;
+      transition: opacity 180ms ease;
     }
+    body.light-dimmer .map-dimmer { opacity: 0.18; }
+    body.no-dimmer .map-dimmer { opacity: 0; }
 
-    /* More obvious night tint */
-    #mapNight {
-      position: absolute; inset: 0;
+    /* Radar sweep overlay */
+    .radar-overlay {
       pointer-events: none;
-      opacity: calc(var(--night) * 0.55);
-      background: rgba(0, 40, 25, 1);
-      mix-blend-mode: color;
-      filter: saturate(1.15) contrast(1.25) brightness(0.85);
-      z-index: 451;
+      position: absolute;
+      inset: 0;
+      z-index: 650;
+      opacity: 0.9;
     }
 
-    /* Fake radar sweep */
-    #radarSweep {
+    /* Top title bar */
+    .titlebar {
       position: absolute;
       left: 50%;
-      top: 50%;
-      width: 220vmax;
-      height: 220vmax;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 500;
-      opacity: calc(var(--sweepOn) * 0.40);
-      background:
-        conic-gradient(
-          from 0deg,
-          rgba(0,255,180,0.00) 0deg,
-          rgba(0,255,180,0.00) 330deg,
-          rgba(0,255,180,0.14) 345deg,
-          rgba(0,255,180,0.38) 355deg,
-          rgba(0,255,180,0.00) 360deg
-        );
-      animation: sweep var(--sweepSpeed) linear infinite;
-      filter: blur(0.6px);
-    }
-    @keyframes sweep {
-      from { transform: translate(-50%, -50%) rotate(0deg); }
-      to   { transform: translate(-50%, -50%) rotate(360deg); }
+      top: 10px;
+      transform: translateX(-50%);
+      z-index: 900;
+      padding: 10px 14px;
+      background: rgba(10,12,16,0.82);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+      white-space: nowrap;
     }
 
-    #side {
-      border-left: 1px solid var(--line);
+    /* Right control panel */
+    .panel {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      z-index: 950;
+      width: 360px;
+      max-width: calc(100vw - 28px);
       background: var(--panel);
-      display: flex;
-      flex-direction: column;
-      min-width: 360px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 44px rgba(0,0,0,0.45);
     }
-    .topbar { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
-    .title { font-size: 16px; font-weight: 900; margin: 0 0 8px; letter-spacing: 0.2px; }
-    .meta { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
-    .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .pill {
+    .panel h2 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .kv {
       font-size: 12px;
-      padding: 6px 8px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted);
+      line-height: 1.5;
     }
 
-    #warning {
-      display: none;
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255, 64, 64, 0.18);
-    }
-    #warning strong { display: block; font-size: 14px; }
-    #warning span { display: block; font-size: 12px; opacity: 0.9; margin-top: 2px; }
-
-    /* Controls */
-    #controls {
-      padding: 12px 14px 8px;
-      border-bottom: 1px solid var(--line);
+    .grid {
       display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
+      margin-top: 10px;
     }
-    .ctrlRow {
-      background: var(--card);
-      border: 1px solid var(--cardLine);
+
+    .field {
+      background: var(--panel2);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 10px;
     }
-    .ctrlRow h4{
-      margin: 0 0 8px;
+
+    .field label {
+      display: block;
       font-size: 12px;
-      letter-spacing: 0.2px;
-      display:flex; justify-content:space-between; align-items:center;
+      color: var(--muted);
+      margin-bottom: 6px;
     }
-    .ctrlRow h4 span { opacity: 0.8; font-weight: 800; }
-    .ctrlRow .grid {
-      display: grid;
-      grid-template-columns: 1fr 96px;
-      gap: 8px;
-      align-items: center;
-    }
-    input[type="range"]{ width:100%; }
-    input[type="number"]{
-      width: 96px;
-      padding: 6px 8px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.25);
-      color: var(--text);
-      font-size: 12px;
+
+    .field input[type="number"],
+    .field input[type="text"]{
+      width: 100%;
       box-sizing: border-box;
-    }
-    .btnRow { display:flex; gap:8px; flex-wrap:wrap; }
-    button {
+      padding: 8px 10px;
       border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      cursor: pointer;
+      user-select: none;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.06);
       color: var(--text);
-      padding: 8px 10px;
+      font-weight: 700;
       font-size: 12px;
-      cursor: pointer;
     }
-    button:hover{ background: rgba(255,255,255,0.10); }
-    button.primary{ border-color: rgba(0,255,180,0.35); }
+    .btn:hover { background: rgba(255,255,255,0.10); }
 
-    #list { padding: 10px 10px 14px; overflow: auto; flex: 1; }
-    .row {
-      padding: 10px;
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
       border-radius: 10px;
-      background: var(--card);
-      border: 1px solid var(--cardLine);
-      margin: 8px 4px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      font-size: 12px;
+      font-weight: 700;
     }
-    .row h4 {
-      margin: 0 0 6px;
-      font-size: 13px;
-      letter-spacing: 0.2px;
+    .toggle input { transform: translateY(1px); }
+
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
       display: flex;
       justify-content: space-between;
       gap: 10px;
     }
-    .row .muted { opacity: 0.7; font-weight: 800; }
-    .row .grid2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 10px;
-      font-size: 12px;
-      opacity: 0.9;
-    }
-    .badge {
-      padding: 2px 6px;
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      font-size: 11px;
-      white-space: nowrap;
-    }
-    .badge.warn {
-      border-color: rgba(255,80,80,0.45);
-      background: rgba(255,80,80,0.18);
-    }
-    .badge.pred {
-      border-color: rgba(255,225,90,0.55);
-      background: rgba(255,225,90,0.16);
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text);
     }
 
-    @media (max-width: 1000px) {
-      #app { grid-template-columns: 1fr; }
-      #side { height: 50vh; min-width: 0; }
+    .legend {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
     }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+      box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    }
+
+    /* Leaflet tweaks */
+    .leaflet-control-attribution { display:none; }
+    .leaflet-container { background: #000; }
   </style>
 </head>
 
 <body>
-  <div id="app">
-    <div id="mapWrap">
-      <div id="map"></div>
-      <div id="mapTint"></div>
-      <div id="mapNight"></div>
-      <div id="radarSweep"></div>
+  <div id="map"></div>
+  <div class="map-dimmer"></div>
+  <canvas class="radar-overlay" id="radarCanvas"></canvas>
+
+  <div class="titlebar" id="titlebar">Head Office Air Picture (for show)</div>
+
+  <div class="panel">
+    <h2>Controls</h2>
+    <div class="kv" id="kvInfo">
+      Centre: <span id="centreText"></span><br/>
+      Filters: under <span id="ceilingText"></span> ft, within <span id="searchText"></span> km, warn within <span id="warnText"></span> km<br/>
+      Polling: <span id="pollText"></span> (auto-pauses outside <span id="windowText"></span>)
     </div>
 
-    <aside id="side">
-      <div class="topbar">
-        <p class="title">Monitoring for Job UAV Operations - Basic Operations Introduction</p>
-        <div class="meta">
-          Centre: <span id="centre">—</span><br>
-          Colours: green (safe), yellow (crossing), red (inside warning)<br>
-          Source: adsb.lol via corsproxy (POC)
-        </div>
-
-        <div class="pillrow">
-          <div class="pill">Visible: <strong id="count">0</strong></div>
-          <div class="pill">Within warn: <strong id="countWarn">0</strong></div>
-          <div class="pill">Last update: <strong id="last">—</strong></div>
-          <div class="pill">Status: <strong id="status">—</strong></div>
-        </div>
+    <div class="grid">
+      <div class="field">
+        <label for="ceilingFt">Max altitude (ft)</label>
+        <input id="ceilingFt" type="number" min="50" max="50000" step="50" value="1000" />
       </div>
-
-      <div id="controls">
-        <div class="ctrlRow">
-          <h4>Location <span id="locLabel">Head Office</span></h4>
-          <div class="btnRow">
-            <button id="btnHQ" class="primary">Use Head Office</button>
-            <button id="btnMe">Use Current Location</button>
-          </div>
-          <div class="meta" style="margin-top:8px;">
-            Current location needs browser permission. If denied, it stays on Head Office.
-          </div>
-        </div>
-
-        <div class="ctrlRow">
-          <h4>Max altitude (ft) <span id="altVal">50000</span></h4>
-          <div class="grid">
-            <input id="altRange" type="range" min="0" max="50000" step="50" value="1000">
-            <input id="altNum" type="number" min="0" max="5000" step="50" value="1000">
-          </div>
-        </div>
-
-        <div class="ctrlRow">
-          <h4>Show range (km) <span id="rangeVal">10</span></h4>
-          <div class="grid">
-            <input id="rangeRange" type="range" min="1" max="250" step="1" value="10">
-            <input id="rangeNum" type="number" min="1" max="250" step="1" value="10">
-          </div>
-        </div>
-
-        <div class="ctrlRow">
-          <h4>Warning ring (km) <span id="warnVal">5</span></h4>
-          <div class="grid">
-            <input id="warnRange" type="range" min="1" max="25" step="1" value="5">
-            <input id="warnNum" type="number" min="1" max="25" step="1" value="5">
-          </div>
-          <div class="meta" style="margin-top:8px;">Auto-clamped so warning ring never exceeds show range.</div>
-        </div>
-
-        <div class="ctrlRow">
-          <h4>Visuals</h4>
-          <div class="btnRow">
-            <button id="btnNight" class="primary">Night mode: ON</button>
-            <button id="btnSweep" class="primary">Radar sweep: ON</button>
-          </div>
-          <div style="margin-top:10px;">
-            <div class="meta" style="margin-bottom:6px;">Map dimmer</div>
-            <input id="dimRange" type="range" min="0" max="90" step="1" value="55">
-          </div>
-        </div>
+      <div class="field">
+        <label for="searchKm">Search radius (km)</label>
+        <input id="searchKm" type="number" min="1" max="250" step="1" value="10" />
       </div>
-
-      <div id="warning">
-        <strong>WARNING: Aircraft within warning ring</strong>
-        <span id="warningDetail">—</span>
+      <div class="field">
+        <label for="warnKm">Warning radius (km)</label>
+        <input id="warnKm" type="number" min="1" max="250" step="1" value="5" />
       </div>
+      <div class="field">
+        <label for="staleSec">Max stale (sec)</label>
+        <input id="staleSec" type="number" min="1" max="120" step="1" value="30" />
+      </div>
+      <div class="field">
+        <label for="pollSec">Poll interval (sec)</label>
+        <input id="pollSec" type="number" min="2" max="60" step="1" value="10" />
+      </div>
+      <div class="field">
+        <label for="sweepSec">Radar sweep (sec)</label>
+        <input id="sweepSec" type="number" min="2" max="20" step="1" value="6" />
+      </div>
+    </div>
 
-      <div id="list"></div>
-    </aside>
+    <div class="row">
+      <span class="toggle"><input type="checkbox" id="useMyLocation" /> Use my location</span>
+      <span class="toggle"><input type="checkbox" id="nightMode" checked /> Night mode</span>
+      <span class="toggle"><input type="checkbox" id="radarSweep" checked /> Radar sweep</span>
+      <span class="toggle"><input type="checkbox" id="showVectors" checked /> Heading lines</span>
+      <span class="toggle"><input type="checkbox" id="trails" checked /> Trails</span>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="applyBtn">Apply</button>
+      <button class="btn" id="recenterBtn">Re-centre</button>
+      <button class="btn" id="reloadBtn">Hard reload</button>
+      <span class="pill" id="visiblePill">Visible: 0</span>
+    </div>
+
+    <div class="status">
+      <div>Last update: <span id="lastUpdate">–</span></div>
+      <div>Status: <span id="statusText">Idle</span></div>
+    </div>
+
+    <div class="legend">
+      <div><span class="dot" style="background: var(--green)"></span>Outside warning</div>
+      <div><span class="dot" style="background: var(--yellow)"></span>Likely to enter warning</div>
+      <div><span class="dot" style="background: var(--red)"></span>Inside warning</div>
+      <div><span class="dot" style="background: #9aa8c7"></span>Filtered out</div>
+    </div>
+
+    <div class="kv" style="margin-top:10px;">
+      Data via your Cloudflare Worker proxy.<br/>
+      Tip: for the office wall, leave polling on, and it will auto-pause outside 08:30–17:30 and hard reload every 30 minutes while active.
+    </div>
   </div>
 
-  <script>
-    // ====== CONFIG ======
-    const HQ_FIXED = { lat: 53.10643205468523, lon: -1.3190169903418059 };
-    let centre = { ...HQ_FIXED };
-    let usingGeo = false;
+<script>
+/* ============================
+   CONFIG YOU WILL EDIT
+   ============================ */
+const WORKER_BASE = "https://raspy-breeze-3e34.j-wilkinson.workers.dev";
 
-    const POLL_MS = 10 * 1000;
+// Head Office default centre (your coords)
+const HQ = { lat: 53.10643205468523, lon: -1.3190169903418059 };
 
-    // Office-hours: set to null for 24/7
-    const OFFICE_HOURS = { startH: 8, startM: 30, endH: 17, endM: 30 };
+// Active time window (local browser time)
+const ACTIVE_WINDOW = { start: "08:30", end: "17:30" };
 
-    // Adjustable
-    let ALT_MAX_FT = 1000;
-    let RADIUS_SHOW_KM = 10;
-    let RADIUS_WARN_KM = 5;
+// Hard reload cadence while active (minutes)
+const HARD_RELOAD_MINUTES = 30;
 
-    // Trails
-    let trailsOn = true;
-    let TRAIL_MAX_AGE_MS = 90 * 1000;
-    const TRAIL_MAX_POINTS_PER_AC = 40;
+/* ============================
+   INTERNAL STATE
+   ============================ */
+let centre = { ...HQ };
+let map, aircraftLayer;
+let searchCircle, warnCircle;
 
-    // Heading prediction
-    // How far to draw the heading vector (km)
-    let VECTOR_LEN_KM = 8;
+let pollingTimer = null;
+let hardReloadTimer = null;
 
-    // ====== HELPERS ======
-    const el = (id) => document.getElementById(id);
+const markerByHex = new Map();      // hex -> { marker, label, vectorLine, trailLine, trailPts: [{latlng, t}] }
+let lastFetchMs = 0;
 
-    function nowWithinWindow(d = new Date()) {
-      if (!OFFICE_HOURS) return true;
-      const mins = d.getHours() * 60 + d.getMinutes();
-      const start = OFFICE_HOURS.startH * 60 + OFFICE_HOURS.startM;
-      const end   = OFFICE_HOURS.endH   * 60 + OFFICE_HOURS.endM;
-      return mins >= start && mins <= end;
+let cfg = {
+  ceilingFt: 1000,
+  searchKm: 10,
+  warnKm: 5,
+  staleSec: 30,
+  pollSec: 10,
+  sweepSec: 6,
+  useMyLocation: false,
+  nightMode: true,
+  radarSweep: true,
+  showVectors: true,
+  trails: true,
+};
+
+function $(id){ return document.getElementById(id); }
+function clamp(n, a, b){ return Math.min(b, Math.max(a, n)); }
+function nowIsoTime(){
+  const d = new Date();
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+function kmToNm(km){ return km / 1.852; }
+function pad2(n){ return String(n).padStart(2, "0"); }
+
+function parseHM(hm){
+  const [h,m] = hm.split(":").map(x=>parseInt(x,10));
+  return { h, m };
+}
+function isWithinWindow(d = new Date()){
+  const s = parseHM(ACTIVE_WINDOW.start);
+  const e = parseHM(ACTIVE_WINDOW.end);
+  const mins = d.getHours() * 60 + d.getMinutes();
+  const sMins = s.h * 60 + s.m;
+  const eMins = e.h * 60 + e.m;
+  return mins >= sMins && mins <= eMins;
+}
+
+/* ============================
+   MAP SETUP
+   ============================ */
+function initMap(){
+  map = L.map("map", {
+    zoomControl: false,
+    worldCopyJump: true
+  }).setView([centre.lat, centre.lon], 11);
+
+  // Dark tile (still readable)
+  const tiles = L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    { maxZoom: 19, subdomains: "abcd" }
+  );
+  tiles.addTo(map);
+
+  aircraftLayer = L.layerGroup().addTo(map);
+
+  // Rings
+  searchCircle = L.circle([centre.lat, centre.lon], {
+    radius: cfg.searchKm * 1000,
+    color: "#3b6cff",
+    weight: 2,
+    opacity: 0.55,
+    fillOpacity: 0.08
+  }).addTo(map);
+
+  warnCircle = L.circle([centre.lat, centre.lon], {
+    radius: cfg.warnKm * 1000,
+    color: "#ff2b2b",
+    weight: 2,
+    opacity: 0.75,
+    fillOpacity: 0.10
+  }).addTo(map);
+
+  updateUiTexts();
+  applyNightMode();
+
+  map.on("dblclick", (e) => {
+    centre = { lat: e.latlng.lat, lon: e.latlng.lng };
+    setCentre(centre, true);
+    saveSettings();
+  });
+
+  setupRadarCanvas();
+  requestAnimationFrame(radarLoop);
+}
+
+function setCentre(c, pan = false){
+  // Update circles
+  searchCircle.setLatLng([c.lat, c.lon]);
+  warnCircle.setLatLng([c.lat, c.lon]);
+  searchCircle.setRadius(cfg.searchKm * 1000);
+  warnCircle.setRadius(cfg.warnKm * 1000);
+
+  if (pan) map.panTo([c.lat, c.lon], { animate: true, duration: 0.6 });
+  updateUiTexts();
+}
+
+function updateUiTexts(){
+  $("centreText").textContent = `${centre.lat.toFixed(6)}, ${centre.lon.toFixed(6)}`;
+  $("ceilingText").textContent = cfg.ceilingFt.toLocaleString();
+  $("searchText").textContent = cfg.searchKm;
+  $("warnText").textContent = cfg.warnKm;
+  $("pollText").textContent = `${cfg.pollSec}s`;
+  $("windowText").textContent = `${ACTIVE_WINDOW.start}–${ACTIVE_WINDOW.end}`;
+}
+
+/* ============================
+   DATA NORMALISATION + FILTERS
+   ============================ */
+function isNumber(x){ return typeof x === "number" && Number.isFinite(x); }
+
+function altFt(ac){
+  if (ac.alt_baro === "ground") return 0;
+  if (isNumber(ac.alt_baro)) return ac.alt_baro;
+  if (isNumber(ac.alt_geom)) return ac.alt_geom; // fallback
+  return null;
+}
+
+function trackDeg(ac){
+  if (isNumber(ac.track)) return ac.track;
+  if (isNumber(ac.true_heading)) return ac.true_heading;
+  return null;
+}
+
+function speedKt(ac){
+  return isNumber(ac.gs) ? ac.gs : 0;
+}
+
+function shouldDisplay(ac){
+  if (!isNumber(ac.lat) || !isNumber(ac.lon)) return false;
+
+  if (isNumber(ac.seen_pos) && ac.seen_pos > cfg.staleSec) return false;
+
+  // bin obvious non-aircraft noise
+  if (ac.t === "TWR") return false;
+
+  const a = altFt(ac);
+  if (a === null) return false;
+
+  // stationary ground clutter
+  const gs = speedKt(ac);
+  if (a === 0 && gs < 5) return false;
+
+  // ceiling filter
+  if (a > cfg.ceilingFt) return false;
+
+  // within search radius (km)
+  const dKm = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
+  if (dKm > cfg.searchKm) return false;
+
+  return true;
+}
+
+/* ============================
+   APPROACH LOGIC (THEATRE MODE)
+   ============================ */
+function degToRad(d){ return d * Math.PI / 180; }
+function radToDeg(r){ return r * 180 / Math.PI; }
+
+function projectLatLon(lat, lon, bearingDeg, distanceKm){
+  const R = 6371;
+  const br = degToRad(bearingDeg);
+  const lat1 = degToRad(lat);
+  const lon1 = degToRad(lon);
+  const d = distanceKm / R;
+
+  const lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(br));
+  const lon2 = lon1 + Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(lat1), Math.cos(d) - Math.sin(lat1)*Math.sin(lat2));
+
+  return { lat: radToDeg(lat2), lon: radToDeg(lon2) };
+}
+
+function isApproachingWarning(ac){
+  // "Approaching" = currently outside warning, projected point within warning
+  const trk = trackDeg(ac);
+  const gs = speedKt(ac);
+
+  if (!isNumber(trk) || gs < 30) return false; // ignore slow movers
+
+  const d0Km = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
+  if (d0Km <= cfg.warnKm) return false;
+
+  const aheadKm = 20; // theatre lookahead distance
+  const p1 = projectLatLon(ac.lat, ac.lon, trk, aheadKm);
+  const d1Km = map.distance([centre.lat, centre.lon], [p1.lat, p1.lon]) / 1000;
+
+  return d1Km <= cfg.warnKm;
+}
+
+/* ============================
+   RENDERING
+   ============================ */
+function colourFor(ac){
+  const dKm = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
+
+  if (dKm <= cfg.warnKm) return getCss("--red"); // inside warning
+  if (isApproachingWarning(ac)) return getCss("--yellow");
+  return getCss("--green");
+}
+
+function getCss(varName){
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function markerRadiusFor(ac){
+  // a touch bigger for closer aircraft, and helicopters are often the fun stuff
+  const dKm = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
+  let r = 5.5;
+  if (dKm < 5) r = 7.0;
+  if (dKm < 2) r = 8.0;
+  if (String(ac.t || "").includes("H")) r += 0.8;
+  return r;
+}
+
+function labelText(ac){
+  const f = (ac.flight || "").trim();
+  const reg = (ac.r || "").trim();
+  const typ = (ac.t || "").trim();
+  const a = altFt(ac);
+  const aStr = (a === null) ? "n/a" : (a === 0 ? "GND" : `${Math.round(a)}ft`);
+  const gs = speedKt(ac);
+  const gsStr = gs ? `${Math.round(gs)}kt` : "";
+  return `${f || reg || ac.hex}\n${typ}  ${aStr}  ${gsStr}`.trim();
+}
+
+function updateAircraft(acList){
+  const visibleHex = new Set();
+
+  for (const ac of acList) {
+    if (!shouldDisplay(ac)) continue;
+
+    const hex = ac.hex;
+    visibleHex.add(hex);
+
+    const col = colourFor(ac);
+    const latlng = L.latLng(ac.lat, ac.lon);
+
+    let entry = markerByHex.get(hex);
+    if (!entry) {
+      const marker = L.circleMarker(latlng, {
+        radius: markerRadiusFor(ac),
+        color: col,
+        weight: 2,
+        opacity: 0.95,
+        fillColor: col,
+        fillOpacity: 0.85
+      }).addTo(aircraftLayer);
+
+      marker.bindTooltip(labelText(ac), {
+        permanent: false,
+        direction: "top",
+        opacity: 0.95
+      });
+
+      entry = {
+        marker,
+        vectorLine: null,
+        trailLine: null,
+        trailPts: []
+      };
+      markerByHex.set(hex, entry);
+    } else {
+      entry.marker.setLatLng(latlng);
+      entry.marker.setStyle({
+        radius: markerRadiusFor(ac),
+        color: col,
+        fillColor: col,
+        fillOpacity: 0.85
+      });
+      entry.marker.setTooltipContent(labelText(ac));
     }
 
-    function setStatus(text) { el("status").textContent = text; }
-    function setLastUpdate(d = new Date()) {
-      const hh = String(d.getHours()).padStart(2, "0");
-      const mm = String(d.getMinutes()).padStart(2, "0");
-      const ss = String(d.getSeconds()).padStart(2, "0");
-      el("last").textContent = `${hh}:${mm}:${ss}`;
-    }
-
-    function updateCentreLabel() {
-      el("centre").textContent = `${centre.lat.toFixed(6)}, ${centre.lon.toFixed(6)}${usingGeo ? " (you)" : " (HQ)"}`;
-      el("locLabel").textContent = usingGeo ? "Current location" : "Head Office";
-    }
-
-    function clampWarn() {
-      if (RADIUS_WARN_KM > RADIUS_SHOW_KM) RADIUS_WARN_KM = RADIUS_SHOW_KM;
-      el("warnRange").max = String(Math.max(1, Math.floor(RADIUS_SHOW_KM)));
-      el("warnNum").max = String(Math.max(1, Math.floor(RADIUS_SHOW_KM)));
-      el("warnRange").value = String(RADIUS_WARN_KM);
-      el("warnNum").value = String(RADIUS_WARN_KM);
-      el("warnVal").textContent = String(RADIUS_WARN_KM);
-    }
-
-    function toRad(deg){ return deg * Math.PI / 180; }
-    function toDeg(rad){ return rad * 180 / Math.PI; }
-
-    function distanceKm(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
-
-    // Project point from lat/lon given bearing (deg) and distance (km)
-    function destinationPoint(lat, lon, bearingDeg, distKm) {
-      const R = 6371;
-      const brng = toRad(bearingDeg);
-      const dByR = distKm / R;
-
-      const lat1 = toRad(lat);
-      const lon1 = toRad(lon);
-
-      const lat2 = Math.asin(
-        Math.sin(lat1) * Math.cos(dByR) +
-        Math.cos(lat1) * Math.sin(dByR) * Math.cos(brng)
-      );
-
-      const lon2 = lon1 + Math.atan2(
-        Math.sin(brng) * Math.sin(dByR) * Math.cos(lat1),
-        Math.cos(dByR) - Math.sin(lat1) * Math.sin(lat2)
-      );
-
-      return { lat: toDeg(lat2), lon: toDeg(lon2) };
-    }
-
-    function safeStr(v){ const s = (v ?? "").toString().trim(); return s.length ? s : "—"; }
-    function fmtAlt(ft){ return (ft == null || Number.isNaN(ft)) ? "—" : `${Math.round(ft)} ft`; }
-    function fmtKm(km){ return (km == null || Number.isNaN(km)) ? "—" : `${km.toFixed(1)} km`; }
-
-    function pickAltitudeFt(a) {
-      const cand = [a.alt_baro, a.alt_geom, a.altitude, a.baro_altitude, a.geo_altitude];
-      for (const v of cand) {
-        const n = Number(v);
-        if (Number.isFinite(n)) return n;
-      }
-      return null;
-    }
-
-    function pickLatLon(a) {
-      const lat = Number(a.lat ?? a.latitude);
-      const lon = Number(a.lon ?? a.lng ?? a.longitude);
-      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
-      return null;
-    }
-
-    function pickTrack(a) {
-      const t = Number(a.track ?? a.trk ?? a.heading);
-      return Number.isFinite(t) ? t : null;
-    }
-
-    function kmToNm(km){ return km / 1.852; }
-
-    function buildApiUrl() {
-      const paddedKm = Math.min(80, RADIUS_SHOW_KM * 1.25);
-      const rNm = Math.max(2, Math.ceil(kmToNm(paddedKm)));
-      const url = `https://api.adsb.lol/v2/point/${centre.lat}/${centre.lon}/${rNm}`;
-      return `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    }
-
-    // ====== “Will cross into warning ring?” ======
-    // We approximate on a flat plane in metres around the centre using equirectangular projection.
-    function toLocalXYm(lat, lon, originLat, originLon) {
-      const R = 6371000;
-      const x = toRad(lon - originLon) * Math.cos(toRad((lat + originLat)/2)) * R;
-      const y = toRad(lat - originLat) * R;
-      return { x, y };
-    }
-
-    // Segment (p0->p1) intersects circle radius r? (r in metres)
-    function segmentIntersectsCircle(p0, p1, r) {
-      const dx = p1.x - p0.x;
-      const dy = p1.y - p0.y;
-      const a = dx*dx + dy*dy;
-      if (a === 0) return (p0.x*p0.x + p0.y*p0.y) <= r*r;
-
-      const b = 2 * (p0.x*dx + p0.y*dy);
-      const c = (p0.x*p0.x + p0.y*p0.y) - r*r;
-
-      const disc = b*b - 4*a*c;
-      if (disc < 0) return false;
-
-      const sqrtDisc = Math.sqrt(disc);
-      const t1 = (-b - sqrtDisc) / (2*a);
-      const t2 = (-b + sqrtDisc) / (2*a);
-
-      // intersection occurs within segment if t in [0,1]
-      return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
-    }
-
-    // ====== MAP ======
-    updateCentreLabel();
-    const map = L.map("map", { zoomControl: false }).setView([centre.lat, centre.lon], 9.5);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors"
-    }).addTo(map);
-
-    const ringShow = L.circle([centre.lat, centre.lon], { radius: RADIUS_SHOW_KM * 1000, weight: 2, opacity: 0.25, fillOpacity: 0.00 }).addTo(map);
-    const ringWarn = L.circle([centre.lat, centre.lon], { radius: RADIUS_WARN_KM * 1000, weight: 2, opacity: 0.65, fillOpacity: 0.00 }).addTo(map);
-    const centreMarker = L.circleMarker([centre.lat, centre.lon], { radius: 4, weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
-
-    function refreshRings() {
-      ringShow.setLatLng([centre.lat, centre.lon]).setRadius(RADIUS_SHOW_KM * 1000);
-      ringWarn.setLatLng([centre.lat, centre.lon]).setRadius(RADIUS_WARN_KM * 1000);
-      centreMarker.setLatLng([centre.lat, centre.lon]);
-      map.panTo([centre.lat, centre.lon], { animate: true, duration: 0.5 });
-    }
-
-    // Markers & heading lines
-    const markers = new Map();     // key -> circleMarker
-    const vectors = new Map();     // key -> polyline
-    function clearNotIn(seen) {
-      for (const [k, m] of markers.entries()) {
-        if (!seen.has(k)) { map.removeLayer(m); markers.delete(k); }
-      }
-      for (const [k, v] of vectors.entries()) {
-        if (!seen.has(k)) { map.removeLayer(v); vectors.delete(k); }
-      }
-    }
-
-    // ===== Trails =====
-    const trails = new Map();       // key -> [{lat,lon,t}]
-    const trailLayers = new Map();  // key -> layerGroup
-
-    function addTrailPoint(key, lat, lon) {
-      if (!trailsOn) return;
-      const now = Date.now();
-      const arr = trails.get(key) ?? [];
-      arr.push({ lat, lon, t: now });
-      while (arr.length > TRAIL_MAX_POINTS_PER_AC) arr.shift();
-      trails.set(key, arr);
-    }
-
-    function pruneTrailPoints() {
-      const cutoff = Date.now() - TRAIL_MAX_AGE_MS;
-      for (const [key, arr] of trails.entries()) {
-        while (arr.length && arr[0].t < cutoff) arr.shift();
-        if (!arr.length) {
-          trails.delete(key);
-          const layer = trailLayers.get(key);
-          if (layer) { map.removeLayer(layer); trailLayers.delete(key); }
-        } else {
-          trails.set(key, arr);
-        }
-      }
-    }
-
-    function renderTrails() {
-      pruneTrailPoints();
-
-      if (!trailsOn) {
-        for (const [, layer] of trailLayers.entries()) map.removeLayer(layer);
-        trailLayers.clear();
-        trails.clear();
-        return;
-      }
-
-      const now = Date.now();
-      const cutoff = now - TRAIL_MAX_AGE_MS;
-
-      for (const [key, arr] of trails.entries()) {
-        let group = trailLayers.get(key);
-        if (!group) { group = L.layerGroup().addTo(map); trailLayers.set(key, group); }
-        else group.clearLayers();
-
-        for (const p of arr) {
-          const alpha = Math.max(0, Math.min(1, (p.t - cutoff) / TRAIL_MAX_AGE_MS));
-          const radius = 2 + alpha * 2;
-          const fillOpacity = 0.22 * alpha;
-
-          L.circleMarker([p.lat, p.lon], {
-            radius,
-            weight: 0,
-            opacity: 0,
-            fillOpacity,
-            fillColor: "rgba(120,255,120,1)"
-          }).addTo(group);
-        }
-      }
-    }
-
-    // smooth fade
-    setInterval(() => { if (trailsOn) renderTrails(); }, 1000);
-
-    // ===== UI bits =====
-    function renderList(items) {
-      const list = el("list");
-      if (!items.length) {
-        list.innerHTML = `<div class="row"><h4>No matching aircraft <span class="muted">—</span></h4>
-          <div class="grid2"><div>Filter</div><div>&lt; ${ALT_MAX_FT} ft, within ${RADIUS_SHOW_KM} km</div></div></div>`;
-        return;
-      }
-
-      list.innerHTML = items.map(x => {
-        const badge = x.state === "red" ? `<span class="badge warn">inside</span>`
-                    : x.state === "yellow" ? `<span class="badge pred">crossing</span>`
-                    : `<span class="badge">safe</span>`;
-        return `
-          <div class="row">
-            <h4>
-              <span>${safeStr(x.callsign)} <span class="muted">${safeStr(x.hex)}</span></span>
-              ${badge}
-            </h4>
-            <div class="grid2">
-              <div>Distance</div><div>${fmtKm(x.distanceKm)}</div>
-              <div>Altitude</div><div>${fmtAlt(x.altFt)}</div>
-              <div>Heading</div><div>${x.track != null ? `${Math.round(x.track)}°` : "—"}</div>
-              <div>Speed</div><div>${x.speedKt != null ? `${Math.round(x.speedKt)} kt` : "—"}</div>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function setWarning(itemsWithinWarn) {
-      const warning = el("warning");
-      const detail = el("warningDetail");
-
-      if (!itemsWithinWarn.length) {
-        warning.style.display = "none";
-        detail.textContent = "—";
-        return;
-      }
-
-      warning.style.display = "block";
-      const summary = itemsWithinWarn
-        .slice(0, 3)
-        .map(a => `${safeStr(a.callsign)} (${fmtAlt(a.altFt)}, ${fmtKm(a.distanceKm)})`)
-        .join(", ");
-
-      detail.textContent = itemsWithinWarn.length > 3 ? `${summary} +${itemsWithinWarn.length - 3} more` : summary;
-    }
-
-    // ===== DATA =====
-    async function fetchAircraft() {
-      if (!nowWithinWindow()) {
-        setStatus("Paused (outside hours)");
-        return { aircraft: [], paused: true };
-      }
-      setStatus("Updating…");
-      const res = await fetch(buildApiUrl(), { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const aircraft = data.ac ?? data.aircraft ?? data?.result ?? [];
-      return { aircraft, paused: false };
-    }
-
-    function normaliseAndFilter(rawAircraft) {
-      const items = [];
-
-      for (const a of rawAircraft) {
-        const pos = pickLatLon(a);
-        if (!pos) continue;
-
-        const altFt = pickAltitudeFt(a);
-        if (altFt == null || altFt > ALT_MAX_FT) continue;
-
-        const dKm = distanceKm(centre.lat, centre.lon, pos.lat, pos.lon);
-        if (dKm > RADIUS_SHOW_KM) continue;
-
-        const hex = (a.hex ?? a.icao ?? a.addr ?? "").toString().trim().toUpperCase() || `${pos.lat},${pos.lon}`;
-        const callsign = (a.flight ?? a.callsign ?? a.call ?? "").toString().trim();
-        const track = pickTrack(a);
-        const speedKt = Number(a.gs ?? a.spd ?? a.speed ?? a.speed_kts);
-        const speedOk = Number.isFinite(speedKt) ? speedKt : null;
-
-        // Decide state (green/yellow/red)
-        let state = "green";
-
-        if (dKm <= RADIUS_WARN_KM) {
-          state = "red";
-        } else if (track != null) {
-          // If heading vector intersects warning circle, mark yellow
-          const end = destinationPoint(pos.lat, pos.lon, track, VECTOR_LEN_KM);
-
-          const p0 = toLocalXYm(pos.lat, pos.lon, centre.lat, centre.lon);
-          const p1 = toLocalXYm(end.lat, end.lon, centre.lat, centre.lon);
-          const rM = RADIUS_WARN_KM * 1000;
-
-          if (segmentIntersectsCircle(p0, p1, rM)) state = "yellow";
-        }
-
-        items.push({
-          key: hex,
-          hex,
-          callsign,
-          lat: pos.lat,
-          lon: pos.lon,
-          altFt,
-          distanceKm: dKm,
-          track,
-          speedKt: speedOk,
-          state
-        });
-      }
-
-      items.sort((a,b) => a.distanceKm - b.distanceKm);
-      return items;
-    }
-
-    function colourForState(state) {
-      if (state === "red") return "rgba(255,70,70,1)";
-      if (state === "yellow") return "rgba(255,225,90,1)";
-      return "rgba(120,255,120,1)";
-    }
-
-    function upsert(items) {
-      const seen = new Set();
-
-      for (const x of items) {
-        seen.add(x.key);
-
-        addTrailPoint(x.key, x.lat, x.lon);
-
-        const color = colourForState(x.state);
-        const isWarn = x.state === "red";
-
-        // aircraft dot
-        const existing = markers.get(x.key);
-        if (existing) {
-          existing.setLatLng([x.lat, x.lon]);
-          existing.setStyle({
-            color,
-            fillColor: color,
+    // Heading vector
+    if (cfg.showVectors) {
+      const trk = trackDeg(ac);
+      const gs = speedKt(ac);
+      if (isNumber(trk) && gs >= 20) {
+        const aheadKm = 12; // looks good at your scales
+        const p1 = projectLatLon(ac.lat, ac.lon, trk, aheadKm);
+        const lineLatLngs = [latlng, L.latLng(p1.lat, p1.lon)];
+        if (!entry.vectorLine) {
+          entry.vectorLine = L.polyline(lineLatLngs, {
+            color: col,
             weight: 2,
-            opacity: 1,
-            fillOpacity: 0.95
-          });
-          existing.setRadius(isWarn ? 7 : 5);
+            opacity: 0.70,
+            dashArray: "6 8"
+          }).addTo(aircraftLayer);
         } else {
-          const m = L.circleMarker([x.lat, x.lon], {
-            radius: isWarn ? 7 : 5,
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.95,
-            color,
-            fillColor: color
-          }).addTo(map);
-          markers.set(x.key, m);
+          entry.vectorLine.setLatLngs(lineLatLngs);
+          entry.vectorLine.setStyle({ color: col, opacity: 0.70 });
         }
-
-        // heading line
-        if (x.track != null) {
-          const end = destinationPoint(x.lat, x.lon, x.track, VECTOR_LEN_KM);
-          const v = vectors.get(x.key);
-          const lineOpts = {
-            weight: 2,
-            opacity: 0.75,
-            color,
-            dashArray: x.state === "yellow" ? "6 6" : null
-          };
-
-          if (v) {
-            v.setLatLngs([[x.lat, x.lon], [end.lat, end.lon]]);
-            v.setStyle(lineOpts);
-          } else {
-            const nl = L.polyline([[x.lat, x.lon],[end.lat, end.lon]], lineOpts).addTo(map);
-            vectors.set(x.key, nl);
-          }
-        } else {
-          const v = vectors.get(x.key);
-          if (v) { map.removeLayer(v); vectors.delete(x.key); }
+      } else {
+        if (entry.vectorLine) {
+          aircraftLayer.removeLayer(entry.vectorLine);
+          entry.vectorLine = null;
         }
       }
-
-      clearNotIn(seen);
-    }
-
-    async function updateOnce() {
-      try {
-        const { aircraft, paused } = await fetchAircraft();
-        if (paused) return;
-
-        const items = normaliseAndFilter(aircraft);
-
-        el("count").textContent = String(items.length);
-        const inside = items.filter(x => x.distanceKm <= RADIUS_WARN_KM);
-        el("countWarn").textContent = String(inside.length);
-
-        setWarning(inside);
-        renderList(items);
-        upsert(items);
-        renderTrails();
-
-        setLastUpdate(new Date());
-        setStatus("Live");
-      } catch (e) {
-        setStatus(`Error: ${e.message}`);
+    } else {
+      if (entry.vectorLine) {
+        aircraftLayer.removeLayer(entry.vectorLine);
+        entry.vectorLine = null;
       }
     }
 
-    // ===== Controls =====
-    function bindRangeAndNumber(rangeEl, numEl, onChange) {
-      const syncFromRange = () => { numEl.value = rangeEl.value; onChange(Number(rangeEl.value)); };
-      const syncFromNum   = () => { rangeEl.value = numEl.value; onChange(Number(numEl.value)); };
-      rangeEl.addEventListener("input", syncFromRange);
-      numEl.addEventListener("change", syncFromNum);
+    // Trails (fade by time)
+    if (cfg.trails) {
+      const tNow = Date.now();
+      entry.trailPts.push({ latlng, t: tNow });
+
+      // keep last 2 minutes
+      const keepMs = 120000;
+      entry.trailPts = entry.trailPts.filter(p => (tNow - p.t) <= keepMs);
+
+      const latlngs = entry.trailPts.map(p => p.latlng);
+
+      if (!entry.trailLine) {
+        entry.trailLine = L.polyline(latlngs, {
+          color: col,
+          weight: 2,
+          opacity: 0.35
+        }).addTo(aircraftLayer);
+      } else {
+        entry.trailLine.setLatLngs(latlngs);
+        entry.trailLine.setStyle({ color: col, opacity: 0.35 });
+      }
+    } else {
+      if (entry.trailLine) {
+        aircraftLayer.removeLayer(entry.trailLine);
+        entry.trailLine = null;
+      }
+      entry.trailPts = [];
+    }
+  }
+
+  // Remove markers not seen this tick
+  for (const [hex, entry] of markerByHex.entries()) {
+    if (!visibleHex.has(hex)) {
+      aircraftLayer.removeLayer(entry.marker);
+      if (entry.vectorLine) aircraftLayer.removeLayer(entry.vectorLine);
+      if (entry.trailLine) aircraftLayer.removeLayer(entry.trailLine);
+      markerByHex.delete(hex);
+    }
+  }
+
+  $("visiblePill").textContent = `Visible: ${markerByHex.size}`;
+}
+
+/* ============================
+   FETCHING
+   ============================ */
+async function fetchAircraft(){
+  const active = isWithinWindow();
+  if (!active) {
+    $("statusText").textContent = "Paused (outside hours)";
+    return;
+  }
+
+  const rNm = clamp(Math.ceil(kmToNm(cfg.searchKm)), 1, 250);
+  const url = `${WORKER_BASE}/point?lat=${encodeURIComponent(centre.lat)}&lon=${encodeURIComponent(centre.lon)}&radiusNm=${encodeURIComponent(rNm)}`;
+
+  $("statusText").textContent = "Fetching…";
+
+  try {
+    const resp = await fetch(url, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    const list = Array.isArray(data.ac) ? data.ac : [];
+    updateAircraft(list);
+
+    lastFetchMs = Date.now();
+    $("lastUpdate").textContent = nowIsoTime();
+    $("statusText").textContent = `OK (${list.length} raw)`;
+  } catch (e) {
+    $("statusText").textContent = "Error";
+    console.error(e);
+  }
+}
+
+/* ============================
+   POLLING + HARD RELOAD
+   ============================ */
+function startPolling(){
+  stopPolling();
+
+  // First tick immediately (if within hours)
+  fetchAircraft();
+
+  pollingTimer = setInterval(() => {
+    fetchAircraft();
+  }, cfg.pollSec * 1000);
+
+  // Hard reload every 30 mins while active (to mimic DroneDesk’s timeout handling)
+  hardReloadTimer = setInterval(() => {
+    if (isWithinWindow()) location.reload();
+  }, HARD_RELOAD_MINUTES * 60 * 1000);
+}
+
+function stopPolling(){
+  if (pollingTimer) clearInterval(pollingTimer);
+  if (hardReloadTimer) clearInterval(hardReloadTimer);
+  pollingTimer = null;
+  hardReloadTimer = null;
+}
+
+/* ============================
+   RADAR SWEEP (THEATRE)
+   ============================ */
+let radarCtx, radarW = 0, radarH = 0;
+let sweepAngle = 0;
+
+function setupRadarCanvas(){
+  const c = $("radarCanvas");
+  radarCtx = c.getContext("2d");
+
+  function resize(){
+    radarW = c.width = window.innerWidth * devicePixelRatio;
+    radarH = c.height = window.innerHeight * devicePixelRatio;
+    c.style.width = window.innerWidth + "px";
+    c.style.height = window.innerHeight + "px";
+    radarCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+}
+
+function radarLoop(){
+  requestAnimationFrame(radarLoop);
+
+  if (!cfg.radarSweep) {
+    radarCtx.clearRect(0,0,window.innerWidth, window.innerHeight);
+    return;
+  }
+
+  // Only animate sweep when active hours, otherwise keep it calm
+  const active = isWithinWindow();
+  const speed = active ? (Math.PI * 2) / (cfg.sweepSec * 60) : (Math.PI * 2) / (12 * 60); // radians per frame-ish
+
+  // Fade previous frame for ghosting
+  radarCtx.fillStyle = "rgba(0,0,0,0.12)";
+  radarCtx.fillRect(0,0,window.innerWidth, window.innerHeight);
+
+  // Centre in screen space is map centre in pixels
+  const centreLatLng = L.latLng(centre.lat, centre.lon);
+  const centrePx = map.latLngToContainerPoint(centreLatLng);
+
+  // Concentric rings for effect
+  radarCtx.save();
+  radarCtx.strokeStyle = "rgba(255,255,255,0.10)";
+  radarCtx.lineWidth = 1;
+
+  const maxR = Math.min(window.innerWidth, window.innerHeight) * 0.55;
+  for (let i=1;i<=6;i++){
+    radarCtx.beginPath();
+    radarCtx.arc(centrePx.x, centrePx.y, (maxR*i)/6, 0, Math.PI*2);
+    radarCtx.stroke();
+  }
+
+  // Crosshairs
+  radarCtx.strokeStyle = "rgba(255,255,255,0.12)";
+  radarCtx.beginPath();
+  radarCtx.moveTo(centrePx.x - maxR, centrePx.y);
+  radarCtx.lineTo(centrePx.x + maxR, centrePx.y);
+  radarCtx.stroke();
+  radarCtx.beginPath();
+  radarCtx.moveTo(centrePx.x, centrePx.y - maxR);
+  radarCtx.lineTo(centrePx.x, centrePx.y + maxR);
+  radarCtx.stroke();
+
+  // Sweep wedge
+  sweepAngle += speed;
+  if (sweepAngle > Math.PI * 2) sweepAngle -= Math.PI * 2;
+
+  const wedge = Math.PI / 10; // wedge width
+  const start = sweepAngle - wedge/2;
+  const end = sweepAngle + wedge/2;
+
+  // Green-ish sweep
+  const grad = radarCtx.createRadialGradient(centrePx.x, centrePx.y, 0, centrePx.x, centrePx.y, maxR);
+  grad.addColorStop(0, "rgba(57,255,20,0.00)");
+  grad.addColorStop(0.25, "rgba(57,255,20,0.08)");
+  grad.addColorStop(1, "rgba(57,255,20,0.00)");
+
+  radarCtx.fillStyle = grad;
+  radarCtx.beginPath();
+  radarCtx.moveTo(centrePx.x, centrePx.y);
+  radarCtx.arc(centrePx.x, centrePx.y, maxR, start, end);
+  radarCtx.closePath();
+  radarCtx.fill();
+
+  radarCtx.restore();
+}
+
+/* ============================
+   UI + SETTINGS
+   ============================ */
+function applyNightMode(){
+  // This only controls the extra dimmer overlay intensity
+  if (cfg.nightMode) {
+    document.body.classList.remove("no-dimmer");
+    document.body.classList.remove("light-dimmer");
+  } else {
+    document.body.classList.add("light-dimmer");
+  }
+}
+
+function loadSettings(){
+  try {
+    const raw = localStorage.getItem("airPictureCfgV1");
+    if (!raw) return;
+    const s = JSON.parse(raw);
+
+    // Merge known keys only
+    for (const k of Object.keys(cfg)) {
+      if (k in s) cfg[k] = s[k];
     }
 
-    bindRangeAndNumber(el("altRange"), el("altNum"), (v) => {
-      ALT_MAX_FT = Math.max(0, Math.min(5000, v));
-      el("altVal").textContent = String(ALT_MAX_FT);
-      updateOnce();
-    });
-
-    bindRangeAndNumber(el("rangeRange"), el("rangeNum"), (v) => {
-      RADIUS_SHOW_KM = Math.max(1, Math.min(50, v));
-      el("rangeVal").textContent = String(RADIUS_SHOW_KM);
-      clampWarn();
-      refreshRings();
-      updateOnce();
-    });
-
-    bindRangeAndNumber(el("warnRange"), el("warnNum"), (v) => {
-      RADIUS_WARN_KM = Math.max(1, Math.min(25, v));
-      clampWarn();
-      refreshRings();
-      updateOnce();
-    });
-
-    el("dimRange").addEventListener("input", () => {
-      const v = Number(el("dimRange").value);
-      document.documentElement.style.setProperty("--dimmer", (v/100).toFixed(2));
-    });
-
-    el("btnNight").addEventListener("click", () => {
-      const current = getComputedStyle(document.documentElement).getPropertyValue("--night").trim() === "1";
-      document.documentElement.style.setProperty("--night", current ? "0" : "1");
-      el("btnNight").textContent = `Night mode: ${current ? "OFF" : "ON"}`;
-      el("btnNight").classList.toggle("primary", !current);
-    });
-
-    el("btnSweep").addEventListener("click", () => {
-      const current = getComputedStyle(document.documentElement).getPropertyValue("--sweepOn").trim() === "1";
-      document.documentElement.style.setProperty("--sweepOn", current ? "0" : "1");
-      el("btnSweep").textContent = `Radar sweep: ${current ? "OFF" : "ON"}`;
-      el("btnSweep").classList.toggle("primary", !current);
-    });
-
-    function setCentre(lat, lon, geoFlag) {
-      centre = { lat, lon };
-      usingGeo = geoFlag;
-      updateCentreLabel();
-      refreshRings();
-      updateOnce();
+    // Restore centre if saved
+    if (s.centre && isNumber(s.centre.lat) && isNumber(s.centre.lon)) {
+      centre = { lat: s.centre.lat, lon: s.centre.lon };
     }
+  } catch {}
+}
 
-    el("btnHQ").addEventListener("click", () => {
-      el("btnHQ").classList.add("primary");
-      el("btnMe").classList.remove("primary");
-      setCentre(HQ_FIXED.lat, HQ_FIXED.lon, false);
-    });
+function saveSettings(){
+  try {
+    localStorage.setItem("airPictureCfgV1", JSON.stringify({
+      ...cfg,
+      centre
+    }));
+  } catch {}
+}
 
-    el("btnMe").addEventListener("click", () => {
-      if (!navigator.geolocation) { setStatus("Geolocation not supported"); return; }
-      setStatus("Requesting location…");
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          el("btnMe").classList.add("primary");
-          el("btnHQ").classList.remove("primary");
-          setCentre(pos.coords.latitude, pos.coords.longitude, true);
-        },
-        (err) => setStatus(`Location denied (${err.code})`),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-      );
-    });
+function readUiIntoCfg(){
+  cfg.ceilingFt = clamp(Number($("ceilingFt").value || 1000), 50, 50000);
+  cfg.searchKm  = clamp(Number($("searchKm").value || 10), 1, 250);
+  cfg.warnKm    = clamp(Number($("warnKm").value || 5), 1, 250);
+  cfg.staleSec  = clamp(Number($("staleSec").value || 30), 1, 120);
+  cfg.pollSec   = clamp(Number($("pollSec").value || 10), 2, 60);
+  cfg.sweepSec  = clamp(Number($("sweepSec").value || 6), 2, 20);
 
-    // Init
-    el("dimRange").value = "55";
-    document.documentElement.style.setProperty("--dimmer", "0.55");
-    updateOnce();
-    setInterval(updateOnce, POLL_MS);
-    setInterval(() => { if (!nowWithinWindow()) setStatus("Paused (outside hours)"); }, 60 * 1000);
-  </script>
+  cfg.useMyLocation = $("useMyLocation").checked;
+  cfg.nightMode = $("nightMode").checked;
+  cfg.radarSweep = $("radarSweep").checked;
+  cfg.showVectors = $("showVectors").checked;
+  cfg.trails = $("trails").checked;
+}
+
+function writeCfgToUi(){
+  $("ceilingFt").value = cfg.ceilingFt;
+  $("searchKm").value = cfg.searchKm;
+  $("warnKm").value = cfg.warnKm;
+  $("staleSec").value = cfg.staleSec;
+  $("pollSec").value = cfg.pollSec;
+  $("sweepSec").value = cfg.sweepSec;
+
+  $("useMyLocation").checked = cfg.useMyLocation;
+  $("nightMode").checked = cfg.nightMode;
+  $("radarSweep").checked = cfg.radarSweep;
+  $("showVectors").checked = cfg.showVectors;
+  $("trails").checked = cfg.trails;
+
+  updateUiTexts();
+  applyNightMode();
+}
+
+async function maybeSetMyLocation(){
+  if (!cfg.useMyLocation) return;
+
+  if (!navigator.geolocation) return;
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        centre = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        setCentre(centre, true);
+        resolve(true);
+      },
+      () => resolve(false),
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
+  });
+}
+
+/* ============================
+   BOOT
+   ============================ */
+function wireUi(){
+  $("applyBtn").addEventListener("click", async () => {
+    readUiIntoCfg();
+    await maybeSetMyLocation();
+
+    setCentre(centre, false);
+
+    // update circles
+    searchCircle.setRadius(cfg.searchKm * 1000);
+    warnCircle.setRadius(cfg.warnKm * 1000);
+
+    applyNightMode();
+    saveSettings();
+
+    // clear existing and restart
+    aircraftLayer.clearLayers();
+    markerByHex.clear();
+
+    startPolling();
+  });
+
+  $("recenterBtn").addEventListener("click", () => {
+    map.setView([centre.lat, centre.lon], map.getZoom(), { animate: true, duration: 0.6 });
+  });
+
+  $("reloadBtn").addEventListener("click", () => location.reload());
+
+  // auto pause/resume without user intervention
+  setInterval(() => {
+    // keep status honest even if no fetch is happening
+    if (!isWithinWindow()) {
+      $("statusText").textContent = "Paused (outside hours)";
+    }
+  }, 5000);
+}
+
+(async function main(){
+  loadSettings();
+  initMap();
+  wireUi();
+  writeCfgToUi();
+
+  // If user wants "use my location", do it at boot too
+  await maybeSetMyLocation();
+  map.setView([centre.lat, centre.lon], 11);
+  setCentre(centre, false);
+
+  startPolling();
+})();
+</script>
 </body>
 </html>
