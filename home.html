@@ -1,0 +1,927 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Office Flight Wall</title>
+
+ 
+
+  <!-- Leaflet (map) -->
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+ 
+
+  <style>
+
+    html, body { height: 100%; margin: 0; background: #0b0f14; color: #e8eef7; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+
+    #app { height: 100%; display: grid; grid-template-columns: 1fr 360px; }
+
+    #map { height: 100%; }
+
+    #side {
+
+      border-left: 1px solid rgba(255,255,255,0.08);
+
+      background: #0b0f14;
+
+      display: flex;
+
+      flex-direction: column;
+
+      min-width: 320px;
+
+    }
+
+    .topbar {
+
+      padding: 14px 14px 10px;
+
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+
+    }
+
+    .title { font-size: 16px; font-weight: 700; margin: 0 0 6px; letter-spacing: 0.2px; }
+
+    .meta { font-size: 12px; opacity: 0.85; line-height: 1.4; }
+
+    .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+    .pill {
+
+      font-size: 12px;
+
+      padding: 6px 8px;
+
+      border-radius: 999px;
+
+      background: rgba(255,255,255,0.06);
+
+      border: 1px solid rgba(255,255,255,0.08);
+
+    }
+
+    #warning {
+
+      display: none;
+
+      padding: 12px 14px;
+
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+
+      background: rgba(255, 64, 64, 0.18);
+
+    }
+
+    #warning strong { display: block; font-size: 14px; }
+
+    #warning span { display: block; font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+    #list {
+
+      padding: 10px 10px 14px;
+
+      overflow: auto;
+
+      flex: 1;
+
+    }
+
+    .row {
+
+      padding: 10px;
+
+      border-radius: 10px;
+
+      background: rgba(255,255,255,0.04);
+
+      border: 1px solid rgba(255,255,255,0.06);
+
+      margin: 8px 4px;
+
+    }
+
+    .row h4 {
+
+      margin: 0 0 6px;
+
+      font-size: 13px;
+
+      letter-spacing: 0.2px;
+
+      display: flex;
+
+      justify-content: space-between;
+
+      gap: 10px;
+
+    }
+
+    .row .muted { opacity: 0.75; font-weight: 600; }
+
+    .row .grid {
+
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      gap: 6px 10px;
+
+      font-size: 12px;
+
+      opacity: 0.9;
+
+    }
+
+    .badge {
+
+      padding: 2px 6px;
+
+      border-radius: 999px;
+
+      border: 1px solid rgba(255,255,255,0.12);
+
+      background: rgba(255,255,255,0.06);
+
+      font-size: 11px;
+
+      white-space: nowrap;
+
+    }
+
+    .badge.warn {
+
+      border-color: rgba(255,80,80,0.45);
+
+      background: rgba(255,80,80,0.18);
+
+    }
+
+ 
+
+    /* Make it look decent on a wall */
+
+    @media (max-width: 900px) {
+
+      #app { grid-template-columns: 1fr; }
+
+      #side { min-width: 0; height: 40vh; }
+
+    }
+
+  </style>
+
+</head>
+
+ 
+
+<body>
+
+  <div id="app">
+
+    <div id="map"></div>
+
+ 
+
+    <aside id="side">
+
+      <div class="topbar">
+
+        <p class="title">Head Office Air Picture (for show)</p>
+
+        <div class="meta">
+
+          Centre: <span id="centre"></span><br>
+
+          Filters: &lt; 1000 ft, within 10 km, warning within 5 km<br>
+
+          Polling: 10s between 08:30–17:30
+
+        </div>
+
+ 
+
+        <div class="pillrow">
+
+          <div class="pill">Visible: <strong id="count">0</strong></div>
+
+          <div class="pill">Within 5 km: <strong id="countWarn">0</strong></div>
+
+          <div class="pill">Last update: <strong id="last">—</strong></div>
+
+          <div class="pill">Status: <strong id="status">—</strong></div>
+
+        </div>
+
+      </div>
+
+ 
+
+      <div id="warning">
+
+        <strong>WARNING: Aircraft within 5 km</strong>
+
+        <span id="warningDetail">—</span>
+
+      </div>
+
+ 
+
+      <div id="list"></div>
+
+    </aside>
+
+  </div>
+
+ 
+
+  <script>
+
+    // ====== CONFIG ======
+
+    const HQ = { lat: 53.10643205468523, lon: -1.3190169903418059 };
+
+ 
+
+    const POLL_MS = 10 * 1000;
+
+    const ALT_MAX_FT = 1000;
+
+ 
+
+    const RADIUS_SHOW_KM = 10;
+
+    const RADIUS_WARN_KM = 5;
+
+ 
+
+    // adsb.lol expects radius in nautical miles for /v2/point/{lat}/{lon}/{radius_nm}
+
+    // 10 km ≈ 5.4 nm, we use 6 nm to comfortably cover the ring.
+
+    const API_RADIUS_NM = 6;
+
+    const API_URL = `https://api.adsb.lol/v2/point/${HQ.lat}/${HQ.lon}/${API_RADIUS_NM}`;
+
+ 
+
+    // Office hours
+
+    const START_H = 8, START_M = 30;
+
+    const END_H   = 17, END_M   = 30;
+
+ 
+
+    // Map defaults
+
+    const MAP_ZOOM = 12;
+
+ 
+
+    // ====== HELPERS ======
+
+    function nowWithinWindow(d = new Date()) {
+
+      const mins = d.getHours() * 60 + d.getMinutes();
+
+      const start = START_H * 60 + START_M;
+
+      const end   = END_H * 60 + END_M;
+
+      return mins >= start && mins <= end;
+
+    }
+
+ 
+
+    function toRad(deg) { return deg * Math.PI / 180; }
+
+ 
+
+    // Haversine distance in km
+
+    function distanceKm(lat1, lon1, lat2, lon2) {
+
+      const R = 6371;
+
+      const dLat = toRad(lat2 - lat1);
+
+      const dLon = toRad(lon2 - lon1);
+
+      const a =
+
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      return R * c;
+
+    }
+
+ 
+
+    // Heading string
+
+    function headingText(track) {
+
+      if (track == null || Number.isNaN(track)) return "—";
+
+      const t = (Math.round(track) % 360 + 360) % 360;
+
+      return `${t}°`;
+
+    }
+
+ 
+
+    function fmtAlt(ft) {
+
+      if (ft == null || Number.isNaN(ft)) return "—";
+
+      return `${Math.round(ft)} ft`;
+
+    }
+
+ 
+
+    function fmtKm(km) {
+
+      if (km == null || Number.isNaN(km)) return "—";
+
+      return `${km.toFixed(1)} km`;
+
+    }
+
+ 
+
+    function safeStr(v) {
+
+      const s = (v ?? "").toString().trim();
+
+      return s.length ? s : "—";
+
+    }
+
+ 
+
+    // Try to extract altitude in feet from different possible field names
+
+    function pickAltitudeFt(a) {
+
+      // Common fields across ADS-B datasets:
+
+      // alt_baro, alt_geom (feet), altitude (feet)
+
+      const cand = [
+
+        a.alt_baro, a.alt_geom, a.altitude,
+
+        a.baro_altitude, a.geo_altitude
+
+      ];
+
+      for (const v of cand) {
+
+        const n = Number(v);
+
+        if (Number.isFinite(n)) return n;
+
+      }
+
+      return null;
+
+    }
+
+ 
+
+    // Try to extract lat/lon from different possible field names
+
+    function pickLatLon(a) {
+
+      const lat = Number(a.lat ?? a.latitude);
+
+      const lon = Number(a.lon ?? a.lng ?? a.longitude);
+
+      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+
+      return null;
+
+    }
+
+ 
+
+    // ====== UI / MAP ======
+
+    document.getElementById("centre").textContent = `${HQ.lat.toFixed(6)}, ${HQ.lon.toFixed(6)}`;
+
+ 
+
+    const map = L.map("map", { zoomControl: false }).setView([HQ.lat, HQ.lon], MAP_ZOOM);
+
+ 
+
+    // OpenStreetMap tiles (fine for internal office use, don’t hammer it)
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+
+      maxZoom: 19,
+
+      attribution: "&copy; OpenStreetMap contributors"
+
+    }).addTo(map);
+
+ 
+
+    // Rings
+
+    const ring10 = L.circle([HQ.lat, HQ.lon], {
+
+      radius: RADIUS_SHOW_KM * 1000,
+
+      weight: 2,
+
+      opacity: 0.7,
+
+      fillOpacity: 0.05
+
+    }).addTo(map);
+
+ 
+
+    const ring5 = L.circle([HQ.lat, HQ.lon], {
+
+      radius: RADIUS_WARN_KM * 1000,
+
+      weight: 2,
+
+      opacity: 0.9,
+
+      fillOpacity: 0.08
+
+    }).addTo(map);
+
+ 
+
+    // HQ marker
+
+    const hqMarker = L.circleMarker([HQ.lat, HQ.lon], {
+
+      radius: 6,
+
+      weight: 2,
+
+      opacity: 1,
+
+      fillOpacity: 0.9
+
+    }).addTo(map).bindPopup("Head Office");
+
+ 
+
+    // Aircraft markers stored by hex/icao
+
+    const markers = new Map();
+
+ 
+
+    function setStatus(text) {
+
+      document.getElementById("status").textContent = text;
+
+    }
+
+ 
+
+    function setLastUpdate(d = new Date()) {
+
+      const hh = String(d.getHours()).padStart(2, "0");
+
+      const mm = String(d.getMinutes()).padStart(2, "0");
+
+      const ss = String(d.getSeconds()).padStart(2, "0");
+
+      document.getElementById("last").textContent = `${hh}:${mm}:${ss}`;
+
+    }
+
+ 
+
+    function clearMarkersNotIn(seenKeys) {
+
+      for (const [key, m] of markers.entries()) {
+
+        if (!seenKeys.has(key)) {
+
+          map.removeLayer(m);
+
+          markers.delete(key);
+
+        }
+
+      }
+
+    }
+
+ 
+
+    function renderList(items) {
+
+      const list = document.getElementById("list");
+
+      if (!items.length) {
+
+        list.innerHTML = `<div class="row"><h4>No aircraft matching filters <span class="muted">—</span></h4>
+
+          <div class="grid">
+
+            <div>Reason</div><div>Nothing under ${ALT_MAX_FT} ft within ${RADIUS_SHOW_KM} km</div>
+
+          </div></div>`;
+
+        return;
+
+      }
+
+ 
+
+      list.innerHTML = items.map(x => {
+
+        const warnBadge = x.distanceKm <= RADIUS_WARN_KM ? `<span class="badge warn">within 5 km</span>` : `<span class="badge">within 10 km</span>`;
+
+        return `
+
+          <div class="row">
+
+            <h4>
+
+              <span>${safeStr(x.callsign)} <span class="muted">${safeStr(x.hex)}</span></span>
+
+              ${warnBadge}
+
+            </h4>
+
+            <div class="grid">
+
+              <div>Distance</div><div>${fmtKm(x.distanceKm)}</div>
+
+              <div>Altitude</div><div>${fmtAlt(x.altFt)}</div>
+
+              <div>Heading</div><div>${headingText(x.track)}</div>
+
+              <div>Speed</div><div>${x.speedKt != null ? `${Math.round(x.speedKt)} kt` : "—"}</div>
+
+            </div>
+
+          </div>
+
+        `;
+
+      }).join("");
+
+    }
+
+ 
+
+    function setWarning(itemsWithin5) {
+
+      const warning = document.getElementById("warning");
+
+      const detail = document.getElementById("warningDetail");
+
+ 
+
+      if (!itemsWithin5.length) {
+
+        warning.style.display = "none";
+
+        detail.textContent = "—";
+
+        return;
+
+      }
+
+ 
+
+      warning.style.display = "block";
+
+      // Short readable summary
+
+      const summary = itemsWithin5
+
+        .slice(0, 3)
+
+        .map(a => `${safeStr(a.callsign)} (${fmtAlt(a.altFt)}, ${fmtKm(a.distanceKm)})`)
+
+        .join(", ");
+
+ 
+
+      detail.textContent = itemsWithin5.length > 3
+
+        ? `${summary} +${itemsWithin5.length - 3} more`
+
+        : summary;
+
+    }
+
+ 
+
+    // ====== DATA FETCH + FILTER ======
+
+    async function fetchAircraft() {
+
+      if (!nowWithinWindow()) {
+
+        setStatus("Paused (outside hours)");
+
+        return { aircraft: [], paused: true };
+
+      }
+
+ 
+
+      setStatus("Updating…");
+
+ 
+
+      const res = await fetch(API_URL, { cache: "no-store" });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+
+ 
+
+      // adsb.lol tends to return aircraft list under "ac" (common) but we handle variants
+
+      const aircraft = data.ac ?? data.aircraft ?? data?.result ?? [];
+
+      return { aircraft, paused: false };
+
+    }
+
+ 
+
+    function normaliseAndFilter(rawAircraft) {
+
+      const items = [];
+
+ 
+
+      for (const a of rawAircraft) {
+
+        const pos = pickLatLon(a);
+
+        if (!pos) continue;
+
+ 
+
+        const altFt = pickAltitudeFt(a);
+
+        if (altFt == null) continue;
+
+        if (altFt > ALT_MAX_FT) continue;
+
+ 
+
+        const dKm = distanceKm(HQ.lat, HQ.lon, pos.lat, pos.lon);
+
+        if (dKm > RADIUS_SHOW_KM) continue;
+
+ 
+
+        const hex = (a.hex ?? a.icao ?? a.addr ?? "").toString().trim().toUpperCase() || `${pos.lat},${pos.lon}`;
+
+        const callsign = (a.flight ?? a.callsign ?? a.call ?? "").toString().trim();
+
+ 
+
+        const track = Number(a.track ?? a.trk ?? a.heading);
+
+        const speedKt = Number(a.gs ?? a.spd ?? a.speed ?? a.speed_kts);
+
+        const isSpeedFinite = Number.isFinite(speedKt) ? speedKt : null;
+
+ 
+
+        items.push({
+
+          key: hex,
+
+          hex,
+
+          callsign,
+
+          lat: pos.lat,
+
+          lon: pos.lon,
+
+          altFt,
+
+          distanceKm: dKm,
+
+          track: Number.isFinite(track) ? track : null,
+
+          speedKt: isSpeedFinite
+
+        });
+
+      }
+
+ 
+
+      // Sort nearest first (looks tidy on a wall)
+
+      items.sort((a, b) => a.distanceKm - b.distanceKm);
+
+      return items;
+
+    }
+
+ 
+
+    function upsertMarkers(items) {
+
+      const seen = new Set();
+
+ 
+
+      for (const x of items) {
+
+        seen.add(x.key);
+
+ 
+
+        const isWarn = x.distanceKm <= RADIUS_WARN_KM;
+
+ 
+
+        // Simple circle marker
+
+        const existing = markers.get(x.key);
+
+        const popupHtml = `
+
+          <div style="font-family:system-ui,Segoe UI,Roboto,Arial; font-size:12px;">
+
+            <div style="font-weight:700; margin-bottom:4px;">${safeStr(x.callsign)} <span style="opacity:0.7;">${safeStr(x.hex)}</span></div>
+
+            <div>Alt: ${fmtAlt(x.altFt)}</div>
+
+            <div>Dist: ${fmtKm(x.distanceKm)}</div>
+
+            <div>Hdg: ${headingText(x.track)}</div>
+
+          </div>
+
+        `;
+
+ 
+
+        if (existing) {
+
+          existing.setLatLng([x.lat, x.lon]);
+
+          existing.setPopupContent(popupHtml);
+
+          existing.setStyle({
+
+            weight: 2,
+
+            opacity: 1,
+
+            fillOpacity: 0.9
+
+          });
+
+          // swap “look” by toggling classless style changes
+
+          if (isWarn) existing.setRadius(7);
+
+          else existing.setRadius(5);
+
+        } else {
+
+          const m = L.circleMarker([x.lat, x.lon], {
+
+            radius: isWarn ? 7 : 5,
+
+            weight: 2,
+
+            opacity: 1,
+
+            fillOpacity: 0.9
+
+          }).addTo(map).bindPopup(popupHtml);
+
+          markers.set(x.key, m);
+
+        }
+
+      }
+
+ 
+
+      clearMarkersNotIn(seen);
+
+    }
+
+ 
+
+    // ====== MAIN LOOP ======
+
+    async function updateOnce() {
+
+      try {
+
+        const { aircraft, paused } = await fetchAircraft();
+
+ 
+
+        if (paused) {
+
+          // Don’t clear markers, just leave the last picture up
+
+          document.getElementById("status").textContent = "Paused (outside hours)";
+
+          return;
+
+        }
+
+ 
+
+        const items = normaliseAndFilter(aircraft);
+
+ 
+
+        // Update UI
+
+        document.getElementById("count").textContent = String(items.length);
+
+        const within5 = items.filter(x => x.distanceKm <= RADIUS_WARN_KM);
+
+        document.getElementById("countWarn").textContent = String(within5.length);
+
+ 
+
+        setWarning(within5);
+
+        renderList(items);
+
+        upsertMarkers(items);
+
+ 
+
+        setLastUpdate(new Date());
+
+        setStatus("Live");
+
+      } catch (err) {
+
+        setStatus(`Error: ${err.message}`);
+
+      }
+
+    }
+
+ 
+
+    // Kick off immediately, then every POLL_MS, but still respects the time window
+
+    updateOnce();
+
+    setInterval(updateOnce, POLL_MS);
+
+ 
+
+    // Also re-check status once a minute so it flips cleanly at 08:30/17:30
+
+    setInterval(() => {
+
+      if (!nowWithinWindow()) setStatus("Paused (outside hours)");
+
+    }, 60 * 1000);
+
+  </script>
+
+</body>
+
+</html>
