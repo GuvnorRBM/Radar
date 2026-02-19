@@ -6,24 +6,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Secur-IT ADS-B Tracking</title>
 
-  <!-- Leaflet (CDN) -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
-    integrity="sha512-puBpdR0798O5p5mYQd3t8mS5jS7N3zG5m2mG4m2m+7bqQ8qfQ2z9bq6k8m0mXb9qQ0o0yG1w3r5x7z2mKQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
-    integrity="sha512-vQH9g8tW3q9tJ8qk7mQkqvQHkq5vQwq3qvQHkq5vQwq3qvQHkq5vQwq3qvQHkq5vQwq3qg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  ></script>
+  <!-- Leaflet (NO integrity hashes to avoid SRI blocking) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <style>
     :root{
-      --tile-brightness: 0.85; /* user controlled */
+      --tile-brightness: 0.85;
       --ui-bg: rgba(12, 14, 18, 0.88);
       --ui-border: rgba(255,255,255,0.12);
       --ui-text: rgba(255,255,255,0.92);
@@ -37,22 +26,21 @@
     }
 
     html, body { height: 100%; margin: 0; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    #wrap { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 360px; gap: 0; }
-    #map { position: relative; height: 100vh; width: 100%; }
+    #wrap { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 360px; }
+    #map { position: relative; height: 100vh; width: 100%; background:#000; }
 
-    /* Make tiles visible but controllable */
+    /* Tile brightness control */
     .leaflet-tile-pane{
       filter: brightness(var(--tile-brightness)) contrast(1.08) saturate(1.05);
       transition: filter 150ms linear;
     }
 
-    /* Keep our overlays above everything */
+    /* Ensure our layers stay on top */
     .leaflet-pane.leaflet-overlay-pane { z-index: 420; }
     .leaflet-pane.leaflet-marker-pane  { z-index: 520; }
     .leaflet-pane.leaflet-tooltip-pane { z-index: 650; }
     .leaflet-pane.leaflet-popup-pane   { z-index: 700; }
 
-    /* Title bar */
     .titlebar{
       position: absolute;
       top: 10px;
@@ -72,7 +60,25 @@
       white-space: nowrap;
     }
 
-    /* Controls panel */
+    /* Debug banner if anything fails */
+    #fatal {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 2500;
+      max-width: min(720px, 92vw);
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,80,80,0.45);
+      background: rgba(0,0,0,0.65);
+      color: rgba(255,255,255,0.92);
+      font-size: 12px;
+      line-height: 1.35;
+      display: none;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+      white-space: pre-wrap;
+    }
+
     #panel{
       height: 100vh;
       padding: 14px 14px 14px 10px;
@@ -98,7 +104,6 @@
       font-size: 14px;
       font-weight: 800;
       letter-spacing: 0.25px;
-      text-transform: none;
     }
 
     .meta{
@@ -196,15 +201,10 @@
       font-weight: 700;
     }
 
-    /* Aircraft dot glow */
-    .ac-dot{
-      filter: drop-shadow(0 0 6px rgba(255,255,255,0.20)) drop-shadow(0 0 10px rgba(0,0,0,0.55));
-    }
     .ac-dot.green{ filter: drop-shadow(0 0 10px rgba(51,255,102,0.65)) drop-shadow(0 0 16px rgba(51,255,102,0.25)); }
     .ac-dot.yellow{ filter: drop-shadow(0 0 10px rgba(255,226,74,0.70)) drop-shadow(0 0 16px rgba(255,226,74,0.25)); }
     .ac-dot.red{ filter: drop-shadow(0 0 10px rgba(255,43,43,0.70)) drop-shadow(0 0 16px rgba(255,43,43,0.25)); }
 
-    /* Label boxes */
     .ac-label{
       background: rgba(0,0,0,0.60);
       border: 1px solid rgba(255,255,255,0.18);
@@ -220,7 +220,6 @@
     .ac-label .muted{ color: rgba(255,255,255,0.70); font-weight: 600; }
     .ac-label .strong{ font-weight: 800; }
 
-    /* Canvas overlay (rings + sweep + trails) */
     .overlay-canvas{
       position:absolute;
       inset:0;
@@ -228,14 +227,12 @@
       z-index: 1500;
     }
 
-    /* Small helper at the bottom */
     .legend{
       margin-top: 10px;
       font-size: 12px;
       color: var(--ui-muted);
       line-height: 1.4;
     }
-    .legend b{ font-weight: 900; }
     .legend .g{ color: var(--green); font-weight: 900; }
     .legend .y{ color: var(--yellow); font-weight: 900; }
     .legend .r{ color: var(--red); font-weight: 900; }
@@ -252,6 +249,7 @@
     <div id="map">
       <div class="titlebar">Secur-IT ADS-B Tracking</div>
       <canvas id="overlay" class="overlay-canvas"></canvas>
+      <div id="fatal"></div>
     </div>
 
     <div id="panel">
@@ -327,7 +325,7 @@
           <button class="btn primary" id="applyBtn">Apply</button>
           <button class="btn" id="recenterBtn">Re-centre</button>
           <button class="btn" id="reloadBtn">Hard reload</button>
-          <span class="pill" id="statusPill">Status: idle</span>
+          <span class="pill" id="statusPill">Status: starting</span>
         </div>
 
         <div class="status-row">
@@ -345,12 +343,12 @@
       <div class="card">
         <div class="panel-title"><span>Endpoint</span><span class="pill">CORS-safe</span></div>
         <div class="meta">
-          Worker URL (edit this in code if you rename it):
+          Worker URL:
           <div style="margin-top:8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.85);">
             <span id="endpointText"></span>
           </div>
           <div style="margin-top:10px;color:rgba(255,255,255,0.6);font-size:12px;">
-            Note: Airplanes.live is rate limited to 1 request/second. Your defaults here are gentle.
+            Note: Airplanes.live is rate limited to 1 request/second.
           </div>
         </div>
       </div>
@@ -359,16 +357,24 @@
 
 <script>
 /* =========================
+   SAFETY: show errors on-screen
+   ========================= */
+function fatal(msg){
+  const el = document.getElementById("fatal");
+  el.style.display = "block";
+  el.textContent = "Radar failed to start:\n" + msg + "\n\nOpen DevTools → Console for the exact error.";
+}
+window.addEventListener("error", (e) => fatal(e.message || String(e.error || e)));
+window.addEventListener("unhandledrejection", (e) => fatal(e.reason ? String(e.reason) : "Unhandled promise rejection"));
+
+/* =========================
    CONFIG
    ========================= */
 const HEAD_OFFICE = { lat: 53.10643205468523, lon: -1.3190169903418059 };
-
-// Your Cloudflare Worker (proxy) endpoint
-// Example you shared: https://raspy-breeze-3e34.j-wilkinson.workers.dev/
 const WORKER_BASE = "https://raspy-breeze-3e34.j-wilkinson.workers.dev";
 
 let cfg = {
-  centreMode: "headoffice",     // "headoffice" | "mylocation"
+  centreMode: "headoffice",
   ceilingFt: 30000,
   searchKm: 100,
   warnKm: 5,
@@ -384,13 +390,13 @@ let cfg = {
   trails: true,
   labels: true,
 
-  officeHoursOnly: true,        // timeGate
-  autoPauseOutside: true,       // pauseOutside
+  officeHoursOnly: true,
+  autoPauseOutside: true,
   officeStart: "08:30",
   officeEnd: "17:30"
 };
 
-// Runtime state
+// Runtime
 let centre = { ...HEAD_OFFICE };
 let myLocation = null;
 
@@ -398,25 +404,14 @@ let map, tilesLight, tilesDark;
 let aircraftLayer, labelLayer, vectorLayer;
 let circles = { search: null, warn: null };
 
-let acByHex = new Map();   // hex -> { marker, label, vector, lastSeenMs, trail:[{lat,lon,ts}] }
-let lastFetchOk = true;
-let lastUpdateTs = null;
-
+let acByHex = new Map(); // hex -> { marker, label, vector, lastSeenMs, trail }
 let pollTimer = null;
+
 let overlayCanvas, overlayCtx;
 let sweepPhase = 0;
 let lastFrame = performance.now();
 
-/* =========================
-   UTIL
-   ========================= */
 const $ = (id) => document.getElementById(id);
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-
-function nowLocalTimeStr(){
-  const d = new Date();
-  return d.toLocaleTimeString(undefined, { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
 
 function setStatus(text, ok=true){
   const pill = $("statusPill");
@@ -424,6 +419,12 @@ function setStatus(text, ok=true){
   pill.style.borderColor = ok ? "rgba(120,170,255,0.45)" : "rgba(255,80,80,0.55)";
 }
 
+function nowLocalTimeStr(){
+  const d = new Date();
+  return d.toLocaleTimeString(undefined, { hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
 function kmToNm(km){ return km / 1.852; }
 function knotsToMps(kn){ return kn * 0.514444; }
 
@@ -437,7 +438,6 @@ function altToNumber(alt){
   }
   return null;
 }
-
 function headingToNumber(h){
   if (h === null || h === undefined) return null;
   const n = Number(h);
@@ -453,7 +453,6 @@ function withinOfficeHours(){
   return (cur >= cfg.officeStart && cur <= cfg.officeEnd);
 }
 
-/* Equirectangular local projection (good enough for <= 250km around centre) */
 function latLonToMeters(lat, lon, refLat, refLon){
   const R = 6371000;
   const rad = Math.PI / 180;
@@ -470,35 +469,30 @@ function metersToLatLon(x, y, refLat, refLon){
 }
 
 function predictCrossing(acLat, acLon, headingDeg, speedKnots, lookAheadSec){
-  if (headingDeg == null || speedKnots == null) return { willEnter: false, minDistM: null, tMinSec: null, pClosest: null, pEnd: null };
-
+  if (headingDeg == null || speedKnots == null) return { willEnter:false, pEnd:null };
   const v = knotsToMps(speedKnots);
-  if (!Number.isFinite(v) || v <= 1) return { willEnter: false, minDistM: null, tMinSec: null, pClosest: null, pEnd: null };
+  if (!Number.isFinite(v) || v <= 1) return { willEnter:false, pEnd:null };
 
   const refLat = centre.lat, refLon = centre.lon;
   const p0 = latLonToMeters(acLat, acLon, refLat, refLon);
 
   const theta = (headingDeg * Math.PI) / 180;
-  const dir = { x: Math.sin(theta), y: Math.cos(theta) }; // 0=N => +y
+  const dir = { x: Math.sin(theta), y: Math.cos(theta) };
   const vVec = { x: dir.x * v, y: dir.y * v };
 
   const T = clamp(lookAheadSec, 15, 600);
-  // minimise distance to origin over [0, T]: t* = - (p0·v) / |v|^2
-  const vv = vVec.x*vVec.x + vVec.y*vVec.y;
-  const tStar = clamp(-(p0.x*vVec.x + p0.y*vVec.y) / vv, 0, T);
-
-  const pClosest = { x: p0.x + vVec.x * tStar, y: p0.y + vVec.y * tStar };
   const pEnd = { x: p0.x + vVec.x * T, y: p0.y + vVec.y * T };
 
+  // closest approach check
+  const vv = vVec.x*vVec.x + vVec.y*vVec.y;
+  const tStar = clamp(-(p0.x*vVec.x + p0.y*vVec.y) / vv, 0, T);
+  const pClosest = { x: p0.x + vVec.x * tStar, y: p0.y + vVec.y * tStar };
   const minDistM = Math.hypot(pClosest.x, pClosest.y);
   const willEnter = minDistM <= (cfg.warnKm * 1000) + 1;
 
-  return { willEnter, minDistM, tMinSec: tStar, pClosest, pEnd };
+  return { willEnter, pEnd };
 }
 
-/* =========================
-   UI
-   ========================= */
 function applyTileBrightness(){
   document.documentElement.style.setProperty("--tile-brightness", String(cfg.tileBrightness));
 }
@@ -520,9 +514,7 @@ function updateMeta(){
   $("pollText").textContent = cfg.officeHoursOnly
     ? `${cfg.pollSec}s, auto-pauses outside ${cfg.officeStart}-${cfg.officeEnd}`
     : `${cfg.pollSec}s`;
-
-  $("endpointText").textContent = `${WORKER_BASE}/point?lat=...&lon=...&radiusNm=...`;
-  $("sourceText").textContent = "Airplanes.live (via Worker)";
+  $("endpointText").textContent = `${WORKER_BASE}/point?lat=LAT&lon=LON&radiusNm=NM`;
 }
 
 function readUiIntoCfg(){
@@ -547,76 +539,56 @@ function readUiIntoCfg(){
   cfg.centreMode = $("useMyLocation").checked ? "mylocation" : "headoffice";
 }
 
-function writeCfgToUi(){
-  $("ceilingFt").value = cfg.ceilingFt;
-  $("searchKm").value = cfg.searchKm;
-  $("warnKm").value = cfg.warnKm;
-  $("staleSec").value = cfg.staleSec;
-  $("pollSec").value = cfg.pollSec;
-  $("sweepSec").value = cfg.sweepSec;
-  $("lookAheadSec").value = cfg.lookAheadSec;
-  $("tileBrightness").value = cfg.tileBrightness;
-
-  $("darkTiles").checked = cfg.darkTiles;
-  $("radarSweep").checked = cfg.radarSweep;
-  $("vectors").checked = cfg.vectors;
-  $("trails").checked = cfg.trails;
-  $("labels").checked = cfg.labels;
-
-  $("timeGate").checked = cfg.officeHoursOnly;
-  $("pauseOutside").checked = cfg.autoPauseOutside;
-
-  $("useMyLocation").checked = (cfg.centreMode === "mylocation");
+async function tryGetMyLocation(){
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy:false, timeout:6000, maximumAge:60000 }
+    );
+  });
+}
+async function updateCentreFromMode(){
+  if (cfg.centreMode === "headoffice"){
+    centre = { ...HEAD_OFFICE };
+    return;
+  }
+  myLocation = await tryGetMyLocation();
+  if (myLocation){
+    centre = { ...myLocation };
+  } else {
+    centre = { ...HEAD_OFFICE };
+    cfg.centreMode = "headoffice";
+    $("useMyLocation").checked = false;
+  }
 }
 
-/* =========================
-   MAP + OVERLAYS
-   ========================= */
 function buildMap(){
-  map = L.map("map", {
-    zoomControl: false,
-    preferCanvas: true,
-    attributionControl: true
-  }).setView([centre.lat, centre.lon], 9);
+  if (!window.L) throw new Error("Leaflet failed to load (window.L is missing).");
 
-  tilesLight = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    opacity: 1,
-    attribution: "&copy; OpenStreetMap contributors"
-  });
+  map = L.map("map", { zoomControl:false, preferCanvas:true }).setView([centre.lat, centre.lon], 9);
 
-  tilesDark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 19,
-    opacity: 1,
-    attribution: "&copy; OpenStreetMap, &copy; CARTO"
-  });
+  tilesLight = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, opacity:1 });
+  tilesDark  = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom:19, opacity:1 });
 
   applyTileMode();
   applyTileBrightness();
 
-  // Layers
   aircraftLayer = L.layerGroup().addTo(map);
   labelLayer = L.layerGroup().addTo(map);
   vectorLayer = L.layerGroup().addTo(map);
 
-  // Rings
   circles.search = L.circle([centre.lat, centre.lon], {
-    radius: cfg.searchKm * 1000,
-    color: "rgba(255,255,255,0.45)",
-    weight: 2,
-    fillColor: "rgba(255,255,255,0.07)",
-    fillOpacity: 0.10
+    radius: cfg.searchKm * 1000, color: "rgba(255,255,255,0.45)", weight: 2,
+    fillColor: "rgba(255,255,255,0.07)", fillOpacity: 0.10
   }).addTo(map);
 
   circles.warn = L.circle([centre.lat, centre.lon], {
-    radius: cfg.warnKm * 1000,
-    color: "rgba(255,43,43,0.70)",
-    weight: 2,
-    fillColor: "rgba(255,43,43,0.10)",
-    fillOpacity: 0.18
+    radius: cfg.warnKm * 1000, color: "rgba(255,43,43,0.70)", weight: 2,
+    fillColor: "rgba(255,43,43,0.10)", fillOpacity: 0.18
   }).addTo(map);
 
-  // Resize canvas with map
   overlayCanvas = $("overlay");
   overlayCtx = overlayCanvas.getContext("2d");
 
@@ -626,35 +598,25 @@ function buildMap(){
     overlayCanvas.height = Math.floor(r.y * devicePixelRatio);
     overlayCanvas.style.width = r.x + "px";
     overlayCanvas.style.height = r.y + "px";
-    overlayCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    overlayCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
   map.on("resize", resize);
-  map.on("move zoom", () => {/* draw loop handles it */});
   resize();
 
-  // Re-centre helper
   $("recenterBtn").addEventListener("click", () => map.setView([centre.lat, centre.lon], 9));
 }
 
 function updateRings(){
-  if (!circles.search || !circles.warn) return;
   circles.search.setLatLng([centre.lat, centre.lon]);
   circles.search.setRadius(cfg.searchKm * 1000);
-
   circles.warn.setLatLng([centre.lat, centre.lon]);
   circles.warn.setRadius(cfg.warnKm * 1000);
 }
 
-function clearAllVisuals(){
-  aircraftLayer.clearLayers();
-  labelLayer.clearLayers();
-  vectorLayer.clearLayers();
-  acByHex.clear();
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
 }
 
-/* =========================
-   DATA FETCH
-   ========================= */
 async function fetchAircraft(){
   const okToPoll = withinOfficeHours() || !cfg.autoPauseOutside;
   if (!okToPoll){
@@ -667,29 +629,18 @@ async function fetchAircraft(){
 
   setStatus("fetching...", true);
 
-  try{
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    lastFetchOk = true;
+  const res = await fetch(url, { cache:"no-store" });
+  if (!res.ok) throw new Error(`Worker HTTP ${res.status}`);
 
-    lastUpdateTs = new Date();
-    $("lastUpdate").textContent = nowLocalTimeStr();
-
-    renderFromData(data);
-    setStatus("OK", true);
-  } catch (e){
-    lastFetchOk = false;
-    setStatus("fetch failed", false);
-    console.warn(e);
-  }
+  const data = await res.json();
+  $("lastUpdate").textContent = nowLocalTimeStr();
+  renderFromData(data);
+  setStatus("OK", true);
 }
 
 function renderFromData(data){
   const ac = Array.isArray(data?.ac) ? data.ac : [];
   const nowMs = Date.now();
-
-  // mark unseen for pruning
   const seenThis = new Set();
 
   for (const item of ac){
@@ -701,41 +652,32 @@ function renderFromData(data){
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
 
     const alt = altToNumber(item.alt_baro ?? item.alt_geom);
-    if (alt == null) continue;
+    if (alt == null || alt > cfg.ceilingFt) continue;
 
-    if (alt > cfg.ceilingFt) continue;
-
-    // stale filter (seen_pos is seconds since last position)
     const seenPosSec = Number(item.seen_pos);
     if (Number.isFinite(seenPosSec) && seenPosSec > cfg.staleSec) continue;
 
     const gs = Number(item.gs);
     const hdg = headingToNumber(item.true_heading ?? item.track);
 
-    // distance from centre (use API-provided dst if available, else haversine-ish via Leaflet)
+    // Prefer API dst (NM) if present, else Leaflet distance
     let distKm = null;
-    if (Number.isFinite(Number(item.dst))) distKm = Number(item.dst) * 1.852; // dst appears to be NM in your payload examples
-    if (!Number.isFinite(distKm)){
-      distKm = map.distance([centre.lat, centre.lon], [lat, lon]) / 1000;
-    }
+    if (Number.isFinite(Number(item.dst))) distKm = Number(item.dst) * 1.852;
+    if (!Number.isFinite(distKm)) distKm = map.distance([centre.lat, centre.lon], [lat, lon]) / 1000;
 
     const insideWarn = distKm <= cfg.warnKm;
 
-    // predicted entry (yellow) if not currently inside but will enter
     let willEnter = false;
     let pEndLL = null;
     if (!insideWarn && hdg != null && Number.isFinite(gs) && gs > 5){
       const pred = predictCrossing(lat, lon, hdg, gs, cfg.lookAheadSec);
       willEnter = pred.willEnter;
-      if (pred.pEnd){
-        pEndLL = metersToLatLon(pred.pEnd.x, pred.pEnd.y, centre.lat, centre.lon);
-      }
+      if (pred.pEnd) pEndLL = metersToLatLon(pred.pEnd.x, pred.pEnd.y, centre.lat, centre.lon);
     }
 
     const colour = insideWarn ? "red" : (willEnter ? "yellow" : "green");
     seenThis.add(hex);
 
-    // marker upsert
     let rec = acByHex.get(hex);
     if (!rec){
       const cm = L.circleMarker([lat, lon], {
@@ -744,11 +686,8 @@ function renderFromData(data){
         color: colour === "green" ? "rgba(51,255,102,0.95)" : colour === "yellow" ? "rgba(255,226,74,0.98)" : "rgba(255,43,43,0.98)",
         fillColor: colour === "green" ? "rgba(51,255,102,1)" : colour === "yellow" ? "rgba(255,226,74,1)" : "rgba(255,43,43,1)",
         fillOpacity: 1
-      });
+      }).addTo(aircraftLayer);
 
-      cm.addTo(aircraftLayer);
-
-      // add CSS glow class via SVG path
       cm.once("add", () => {
         const el = cm.getElement();
         if (el){
@@ -761,32 +700,25 @@ function renderFromData(data){
     }
 
     rec.lastSeenMs = nowMs;
-
-    // trail update
     rec.trail.push({ lat, lon, ts: nowMs });
-    const maxTrailPoints = 60;
-    if (rec.trail.length > maxTrailPoints) rec.trail.splice(0, rec.trail.length - maxTrailPoints);
+    if (rec.trail.length > 60) rec.trail.splice(0, rec.trail.length - 60);
 
-    // update marker
     rec.marker.setLatLng([lat, lon]);
     rec.marker.setStyle({
       color: colour === "green" ? "rgba(51,255,102,0.95)" : colour === "yellow" ? "rgba(255,226,74,0.98)" : "rgba(255,43,43,0.98)",
-      fillColor: colour === "green" ? "rgba(51,255,102,1)" : colour === "yellow" ? "rgba(255,226,74,1)" : "rgba(255,43,43,1)",
-      fillOpacity: 1
+      fillColor: colour === "green" ? "rgba(51,255,102,1)" : colour === "yellow" ? "rgba(255,226,74,1)" : "rgba(255,43,43,1)"
     });
 
-    // update glow class
     const el = rec.marker.getElement();
     if (el){
       el.classList.remove("green","yellow","red");
       el.classList.add(colour);
     }
 
-    // vector line (heading)
+    // vector
     if (cfg.vectors && pEndLL && hdg != null){
-      const end = [pEndLL.lat, pEndLL.lon];
       const start = [lat, lon];
-
+      const end = [pEndLL.lat, pEndLL.lon];
       if (!rec.vector){
         rec.vector = L.polyline([start, end], {
           color: colour === "green" ? "rgba(51,255,102,0.55)" : colour === "yellow" ? "rgba(255,226,74,0.65)" : "rgba(255,43,43,0.70)",
@@ -800,14 +732,12 @@ function renderFromData(data){
           color: colour === "green" ? "rgba(51,255,102,0.55)" : colour === "yellow" ? "rgba(255,226,74,0.65)" : "rgba(255,43,43,0.70)"
         });
       }
-    } else {
-      if (rec.vector){
-        vectorLayer.removeLayer(rec.vector);
-        rec.vector = null;
-      }
+    } else if (rec.vector){
+      vectorLayer.removeLayer(rec.vector);
+      rec.vector = null;
     }
 
-    // label box
+    // label
     if (cfg.labels){
       const reg = (item.r || "").trim();
       const type = (item.t || "").trim();
@@ -827,28 +757,21 @@ function renderFromData(data){
           <div class="muted">${escapeHtml(line3)}</div>
         </div>`;
 
-      const icon = L.divIcon({
-        className: "",
-        html,
-        iconSize: [1,1],
-        iconAnchor: [-10, 10] // nudge right/down from dot
-      });
+      const icon = L.divIcon({ className:"", html, iconSize:[1,1], iconAnchor:[-10, 10] });
 
       if (!rec.label){
-        rec.label = L.marker([lat, lon], { icon, interactive: false }).addTo(labelLayer);
+        rec.label = L.marker([lat, lon], { icon, interactive:false }).addTo(labelLayer);
       } else {
         rec.label.setLatLng([lat, lon]);
         rec.label.setIcon(icon);
       }
-    } else {
-      if (rec.label){
-        labelLayer.removeLayer(rec.label);
-        rec.label = null;
-      }
+    } else if (rec.label){
+      labelLayer.removeLayer(rec.label);
+      rec.label = null;
     }
   }
 
-  // prune old aircraft not seen recently
+  // prune old
   const pruneAfterMs = Math.max(cfg.staleSec * 1000, cfg.pollSec * 3000);
   for (const [hex, rec] of acByHex.entries()){
     if (seenThis.has(hex)) continue;
@@ -863,16 +786,14 @@ function renderFromData(data){
   $("visiblePill").textContent = `Visible: ${acByHex.size}`;
 }
 
-/* simple HTML escape for labels */
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-  }[c]));
+function ringPxPerM(latlng){
+  const p = map.latLngToContainerPoint(latlng);
+  const p2 = L.point(p.x + 100, p.y);
+  const ll2 = map.containerPointToLatLng(p2);
+  const metres = map.distance(latlng, ll2);
+  return 100 / metres;
 }
 
-/* =========================
-   CANVAS DRAW: rings + crosshair + sweep + trails
-   ========================= */
 function drawOverlay(ts){
   const dt = (ts - lastFrame) / 1000;
   lastFrame = ts;
@@ -881,45 +802,30 @@ function drawOverlay(ts){
   const h = overlayCanvas.clientHeight;
   overlayCtx.clearRect(0, 0, w, h);
 
-  // centre point on screen
   const centrePx = map.latLngToContainerPoint([centre.lat, centre.lon]);
 
   // crosshair
   overlayCtx.save();
-  overlayCtx.strokeStyle = getCss("--crosshair");
+  overlayCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--crosshair").trim();
   overlayCtx.lineWidth = 1;
-
-  overlayCtx.beginPath();
-  overlayCtx.moveTo(0, centrePx.y);
-  overlayCtx.lineTo(w, centrePx.y);
-  overlayCtx.stroke();
-
-  overlayCtx.beginPath();
-  overlayCtx.moveTo(centrePx.x, 0);
-  overlayCtx.lineTo(centrePx.x, h);
-  overlayCtx.stroke();
+  overlayCtx.beginPath(); overlayCtx.moveTo(0, centrePx.y); overlayCtx.lineTo(w, centrePx.y); overlayCtx.stroke();
+  overlayCtx.beginPath(); overlayCtx.moveTo(centrePx.x, 0); overlayCtx.lineTo(centrePx.x, h); overlayCtx.stroke();
   overlayCtx.restore();
 
-  // radial rings (draw several rings proportional to search radius)
-  const searchR = cfg.searchKm * 1000;
-  const warnR = cfg.warnKm * 1000;
-
+  // rings (visual)
   const pxPerM = ringPxPerM([centre.lat, centre.lon]);
-  const searchPx = searchR * pxPerM;
-  const warnPx = warnR * pxPerM;
+  const searchPx = (cfg.searchKm * 1000) * pxPerM;
+  const warnPx = (cfg.warnKm * 1000) * pxPerM;
 
   overlayCtx.save();
-  overlayCtx.strokeStyle = getCss("--ring");
+  overlayCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--ring").trim();
   overlayCtx.lineWidth = 1.3;
-
-  const ringCount = 6;
-  for (let i=1;i<=ringCount;i++){
-    const r = (searchPx * i) / ringCount;
+  for (let i=1;i<=6;i++){
+    const r = (searchPx * i)/6;
     overlayCtx.beginPath();
     overlayCtx.arc(centrePx.x, centrePx.y, r, 0, Math.PI*2);
     overlayCtx.stroke();
   }
-  // warning ring highlight
   overlayCtx.strokeStyle = "rgba(255,43,43,0.75)";
   overlayCtx.lineWidth = 2;
   overlayCtx.beginPath();
@@ -934,15 +840,11 @@ function drawOverlay(ts){
     for (const rec of acByHex.values()){
       const pts = rec.trail;
       if (!pts || pts.length < 2) continue;
-
-      // draw segmented fade
       for (let i=1;i<pts.length;i++){
-        const a = i / pts.length; // 0..1
+        const a = i / pts.length;
         const alpha = 0.05 + a*0.35;
-
         const p0 = map.latLngToContainerPoint([pts[i-1].lat, pts[i-1].lon]);
         const p1 = map.latLngToContainerPoint([pts[i].lat, pts[i].lon]);
-
         overlayCtx.strokeStyle = `rgba(140,220,255,${alpha})`;
         overlayCtx.lineWidth = 2;
         overlayCtx.beginPath();
@@ -954,19 +856,18 @@ function drawOverlay(ts){
     overlayCtx.restore();
   }
 
-  // radar sweep (pure theatre)
+  // sweep
   if (cfg.radarSweep){
     sweepPhase += dt / cfg.sweepSec;
     if (sweepPhase > 1) sweepPhase -= 1;
 
-    const angle = sweepPhase * Math.PI * 2; // 0..2pi
-    const sweepWidth = Math.PI / 18; // about 10 degrees
+    const angle = sweepPhase * Math.PI*2;
+    const sweepWidth = Math.PI / 18;
     const rMax = searchPx;
 
     overlayCtx.save();
     overlayCtx.translate(centrePx.x, centrePx.y);
 
-    // beam
     const grad = overlayCtx.createRadialGradient(0,0,0, 0,0,rMax);
     grad.addColorStop(0, "rgba(60,255,140,0.00)");
     grad.addColorStop(0.15, "rgba(60,255,140,0.10)");
@@ -980,108 +881,42 @@ function drawOverlay(ts){
     overlayCtx.closePath();
     overlayCtx.fill();
 
-    // bright leading edge
-    overlayCtx.strokeStyle = "rgba(90,255,160,0.35)";
-    overlayCtx.lineWidth = 2;
-    overlayCtx.beginPath();
-    overlayCtx.arc(0,0,rMax, angle + sweepWidth*0.85, angle + sweepWidth*0.85);
-    overlayCtx.stroke();
-
     overlayCtx.restore();
   }
 
   requestAnimationFrame(drawOverlay);
 }
 
-function getCss(varName){
-  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-}
-
-function ringPxPerM(latlng){
-  // calculate px per metre at current zoom near centre
-  const p = map.latLngToContainerPoint(latlng);
-  const p2 = L.point(p.x + 100, p.y);
-  const ll2 = map.containerPointToLatLng(p2);
-  const metres = map.distance(latlng, ll2);
-  return 100 / metres;
-}
-
-/* =========================
-   POLLING
-   ========================= */
 function startPolling(){
   stopPolling();
   const tick = async () => {
-    // update polling status text
-    if (cfg.officeHoursOnly){
-      $("pollText").textContent = `${cfg.pollSec}s, auto-pauses outside ${cfg.officeStart}-${cfg.officeEnd}`;
-    } else {
-      $("pollText").textContent = `${cfg.pollSec}s`;
+    try{
+      await fetchAircraft();
+    } catch (e){
+      setStatus("fetch failed", false);
+      console.warn(e);
     }
-    await fetchAircraft();
   };
-
   tick();
   pollTimer = setInterval(tick, cfg.pollSec * 1000);
 }
-
 function stopPolling(){
-  if (pollTimer){
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
+  if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
 }
 
-/* =========================
-   LOCATION
-   ========================= */
-async function tryGetMyLocation(){
-  return new Promise((resolve) => {
-    if (!("geolocation" in navigator)) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      () => resolve(null),
-      { enableHighAccuracy: false, timeout: 6000, maximumAge: 60_000 }
-    );
-  });
-}
-
-async function updateCentreFromMode(){
-  if (cfg.centreMode === "headoffice"){
-    centre = { ...HEAD_OFFICE };
-    return;
-  }
-
-  // my location
-  myLocation = await tryGetMyLocation();
-  if (myLocation){
-    centre = { ...myLocation };
-  } else {
-    // fallback
-    centre = { ...HEAD_OFFICE };
-    cfg.centreMode = "headoffice";
-    $("useMyLocation").checked = false;
-  }
-}
-
-/* =========================
-   WIRE UP UI
-   ========================= */
 function wireUi(){
   $("applyBtn").addEventListener("click", async () => {
     readUiIntoCfg();
     applyTileBrightness();
     applyTileMode();
-
     await updateCentreFromMode();
-    map.setView([centre.lat, centre.lon], map.getZoom(), { animate: false });
-
+    map.setView([centre.lat, centre.lon], map.getZoom(), { animate:false });
     updateRings();
     updateMeta();
     startPolling();
   });
 
-  $("reloadBtn").addEventListener("click", () => location.reload(true));
+  $("reloadBtn").addEventListener("click", () => location.reload());
 
   $("darkTiles").addEventListener("change", () => {
     readUiIntoCfg();
@@ -1096,39 +931,26 @@ function wireUi(){
   $("useMyLocation").addEventListener("change", async () => {
     readUiIntoCfg();
     await updateCentreFromMode();
-    map.setView([centre.lat, centre.lon], map.getZoom(), { animate: false });
+    map.setView([centre.lat, centre.lon], map.getZoom(), { animate:false });
     updateRings();
     updateMeta();
   });
 }
 
-/* =========================
-   INIT
-   ========================= */
 (async function main(){
-  // initial fill
-  writeCfgToUi();
+  setStatus("starting", true);
   $("endpointText").textContent = `${WORKER_BASE}/point?lat=LAT&lon=LON&radiusNm=NM`;
-  updateMeta();
 
-  // centre default
   await updateCentreFromMode();
-
-  // build map
   buildMap();
-  map.setView([centre.lat, centre.lon], 9, { animate: false });
-
-  // update meta now map exists
+  map.setView([centre.lat, centre.lon], 9, { animate:false });
   updateMeta();
 
-  // start overlay draw loop
   requestAnimationFrame(drawOverlay);
-
-  // UI wiring
   wireUi();
-
-  // start polling
   startPolling();
+
+  setStatus("running", true);
 })();
 </script>
 </body>
