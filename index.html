@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Office Flight Wall</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -13,42 +12,49 @@
 
   <style>
     :root{
-      --bg:#0b0f14;
-      --panel:#0b0f14;
+      --bg:#07090c;
+      --panel:#07090c;
       --line:rgba(255,255,255,0.08);
       --text:#e8eef7;
       --muted:rgba(232,238,247,0.78);
       --card:rgba(255,255,255,0.04);
       --cardLine:rgba(255,255,255,0.06);
 
-      /* theatre */
-      --dimmer: 0.30;     /* 0..0.9 */
-      --night: 1;         /* 0/1 toggle */
-      --sweepOn: 1;       /* 0/1 toggle */
-      --sweepSpeed: 6.5s; /* rotate speed */
+      /* theatre look */
+      --dimmer: 0.55;     /* heavier default */
+      --night: 1;
+      --sweepOn: 1;
+      --sweepSpeed: 6.5s;
+
+      /* colours */
+      --green: rgba(120, 255, 120, 1);
+      --yellow: rgba(255, 225, 90, 1);
+      --red: rgba(255, 70, 70, 1);
+      --trailGreen: rgba(120,255,120,1);
     }
 
     html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-    #app { height: 100%; display: grid; grid-template-columns: 1fr 420px; }
+    #app { height: 100%; display: grid; grid-template-columns: 1fr 460px; }
     #mapWrap { position: relative; height: 100%; }
     #map { height: 100%; }
 
-    /* Dimmer / night filter (works on any tile layer) */
+    /* Stronger dimmer */
     #mapTint {
       position: absolute; inset: 0;
       pointer-events: none;
       background: rgba(0,0,0,var(--dimmer));
       mix-blend-mode: multiply;
-      transition: opacity 200ms;
       z-index: 450;
     }
+
+    /* More obvious night tint */
     #mapNight {
       position: absolute; inset: 0;
       pointer-events: none;
-      opacity: calc(var(--night) * 0.35);
-      filter: saturate(0.85) contrast(1.05);
-      background: rgba(10, 30, 20, 1);
+      opacity: calc(var(--night) * 0.55);
+      background: rgba(0, 40, 25, 1);
       mix-blend-mode: color;
+      filter: saturate(1.15) contrast(1.25) brightness(0.85);
       z-index: 451;
     }
 
@@ -63,19 +69,18 @@
       border-radius: 50%;
       pointer-events: none;
       z-index: 500;
-      opacity: calc(var(--sweepOn) * 0.35);
-      /* A wedge of light + fading tail */
+      opacity: calc(var(--sweepOn) * 0.40);
       background:
         conic-gradient(
           from 0deg,
           rgba(0,255,180,0.00) 0deg,
           rgba(0,255,180,0.00) 330deg,
-          rgba(0,255,180,0.12) 345deg,
-          rgba(0,255,180,0.30) 355deg,
+          rgba(0,255,180,0.14) 345deg,
+          rgba(0,255,180,0.38) 355deg,
           rgba(0,255,180,0.00) 360deg
         );
       animation: sweep var(--sweepSpeed) linear infinite;
-      filter: blur(0.4px);
+      filter: blur(0.6px);
     }
     @keyframes sweep {
       from { transform: translate(-50%, -50%) rotate(0deg); }
@@ -90,7 +95,7 @@
       min-width: 360px;
     }
     .topbar { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
-    .title { font-size: 16px; font-weight: 800; margin: 0 0 8px; letter-spacing: 0.2px; }
+    .title { font-size: 16px; font-weight: 900; margin: 0 0 8px; letter-spacing: 0.2px; }
     .meta { font-size: 12px; color: var(--muted); line-height: 1.45; }
 
     .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -130,16 +135,16 @@
       letter-spacing: 0.2px;
       display:flex; justify-content:space-between; align-items:center;
     }
-    .ctrlRow h4 span { opacity: 0.8; font-weight: 700; }
+    .ctrlRow h4 span { opacity: 0.8; font-weight: 800; }
     .ctrlRow .grid {
       display: grid;
-      grid-template-columns: 1fr 92px;
+      grid-template-columns: 1fr 96px;
       gap: 8px;
       align-items: center;
     }
     input[type="range"]{ width:100%; }
     input[type="number"]{
-      width: 92px;
+      width: 96px;
       padding: 6px 8px;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.10);
@@ -149,7 +154,7 @@
       box-sizing: border-box;
     }
     .btnRow { display:flex; gap:8px; flex-wrap:wrap; }
-    button, .toggle {
+    button {
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.06);
@@ -159,9 +164,7 @@
       cursor: pointer;
     }
     button:hover{ background: rgba(255,255,255,0.10); }
-    button.primary{
-      border-color: rgba(0,255,180,0.35);
-    }
+    button.primary{ border-color: rgba(0,255,180,0.35); }
 
     #list { padding: 10px 10px 14px; overflow: auto; flex: 1; }
     .row {
@@ -179,7 +182,7 @@
       justify-content: space-between;
       gap: 10px;
     }
-    .row .muted { opacity: 0.7; font-weight: 700; }
+    .row .muted { opacity: 0.7; font-weight: 800; }
     .row .grid2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -199,10 +202,14 @@
       border-color: rgba(255,80,80,0.45);
       background: rgba(255,80,80,0.18);
     }
+    .badge.pred {
+      border-color: rgba(255,225,90,0.55);
+      background: rgba(255,225,90,0.16);
+    }
 
     @media (max-width: 1000px) {
       #app { grid-template-columns: 1fr; }
-      #side { height: 46vh; min-width: 0; }
+      #side { height: 50vh; min-width: 0; }
     }
   </style>
 </head>
@@ -218,10 +225,10 @@
 
     <aside id="side">
       <div class="topbar">
-        <p class="title">Head Office Air Picture (for show)</p>
+        <p class="title">Monitoring for Job UAV Operations - Basic Operations Introduction</p>
         <div class="meta">
           Centre: <span id="centre">—</span><br>
-          Filters: altitude, range, warning ring configurable<br>
+          Colours: green (safe), yellow (crossing), red (inside warning)<br>
           Source: adsb.lol via corsproxy (POC)
         </div>
 
@@ -278,7 +285,7 @@
           </div>
           <div style="margin-top:10px;">
             <div class="meta" style="margin-bottom:6px;">Map dimmer</div>
-            <input id="dimRange" type="range" min="0" max="90" step="1" value="30">
+            <input id="dimRange" type="range" min="0" max="90" step="1" value="55">
           </div>
         </div>
       </div>
@@ -293,32 +300,32 @@
   </div>
 
   <script>
-    // ====== BASE CONFIG ======
+    // ====== CONFIG ======
     const HQ_FIXED = { lat: 53.10643205468523, lon: -1.3190169903418059 };
     let centre = { ...HQ_FIXED };
     let usingGeo = false;
 
     const POLL_MS = 10 * 1000;
 
-    // Office hours (local time). Set to null to run 24/7.
+    // Office-hours: set to null for 24/7
     const OFFICE_HOURS = { startH: 8, startM: 30, endH: 17, endM: 30 };
 
-    // Defaults (user adjustable)
+    // Adjustable
     let ALT_MAX_FT = 1000;
     let RADIUS_SHOW_KM = 10;
     let RADIUS_WARN_KM = 5;
 
-    // adsb.lol expects radius in nautical miles for /v2/point/{lat}/{lon}/{radius_nm}
-    function kmToNm(km){ return km / 1.852; }
+    // Trails
+    let trailsOn = true;
+    let TRAIL_MAX_AGE_MS = 90 * 1000;
+    const TRAIL_MAX_POINTS_PER_AC = 40;
 
-    function buildApiUrl() {
-      // Pad a bit so the API query radius comfortably covers the display ring
-      const paddedKm = Math.min(80, RADIUS_SHOW_KM * 1.25);
-      const rNm = Math.max(2, Math.ceil(kmToNm(paddedKm)));
-      const url = `https://api.adsb.lol/v2/point/${centre.lat}/${centre.lon}/${rNm}`;
-      // 30-second CORS fix: proxy it
-      return `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    }
+    // Heading prediction
+    // How far to draw the heading vector (km)
+    let VECTOR_LEN_KM = 8;
+
+    // ====== HELPERS ======
+    const el = (id) => document.getElementById(id);
 
     function nowWithinWindow(d = new Date()) {
       if (!OFFICE_HOURS) return true;
@@ -328,48 +335,6 @@
       return mins >= start && mins <= end;
     }
 
-    function toRad(deg) { return deg * Math.PI / 180; }
-    function distanceKm(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
-
-    function headingText(track) {
-      if (track == null || Number.isNaN(track)) return "—";
-      const t = (Math.round(track) % 360 + 360) % 360;
-      return `${t}°`;
-    }
-    function fmtAlt(ft) { return (ft == null || Number.isNaN(ft)) ? "—" : `${Math.round(ft)} ft`; }
-    function fmtKm(km)  { return (km == null || Number.isNaN(km)) ? "—" : `${km.toFixed(1)} km`; }
-    function safeStr(v) {
-      const s = (v ?? "").toString().trim();
-      return s.length ? s : "—";
-    }
-
-    function pickAltitudeFt(a) {
-      const cand = [a.alt_baro, a.alt_geom, a.altitude, a.baro_altitude, a.geo_altitude];
-      for (const v of cand) {
-        const n = Number(v);
-        if (Number.isFinite(n)) return n;
-      }
-      return null;
-    }
-    function pickLatLon(a) {
-      const lat = Number(a.lat ?? a.latitude);
-      const lon = Number(a.lon ?? a.lng ?? a.longitude);
-      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
-      return null;
-    }
-
-    // ====== UI ======
-    const el = (id) => document.getElementById(id);
     function setStatus(text) { el("status").textContent = text; }
     function setLastUpdate(d = new Date()) {
       const hh = String(d.getHours()).padStart(2, "0");
@@ -385,7 +350,6 @@
 
     function clampWarn() {
       if (RADIUS_WARN_KM > RADIUS_SHOW_KM) RADIUS_WARN_KM = RADIUS_SHOW_KM;
-      // reflect in UI
       el("warnRange").max = String(Math.max(1, Math.floor(RADIUS_SHOW_KM)));
       el("warnNum").max = String(Math.max(1, Math.floor(RADIUS_SHOW_KM)));
       el("warnRange").value = String(RADIUS_WARN_KM);
@@ -393,18 +357,119 @@
       el("warnVal").textContent = String(RADIUS_WARN_KM);
     }
 
+    function toRad(deg){ return deg * Math.PI / 180; }
+    function toDeg(rad){ return rad * 180 / Math.PI; }
+
+    function distanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    // Project point from lat/lon given bearing (deg) and distance (km)
+    function destinationPoint(lat, lon, bearingDeg, distKm) {
+      const R = 6371;
+      const brng = toRad(bearingDeg);
+      const dByR = distKm / R;
+
+      const lat1 = toRad(lat);
+      const lon1 = toRad(lon);
+
+      const lat2 = Math.asin(
+        Math.sin(lat1) * Math.cos(dByR) +
+        Math.cos(lat1) * Math.sin(dByR) * Math.cos(brng)
+      );
+
+      const lon2 = lon1 + Math.atan2(
+        Math.sin(brng) * Math.sin(dByR) * Math.cos(lat1),
+        Math.cos(dByR) - Math.sin(lat1) * Math.sin(lat2)
+      );
+
+      return { lat: toDeg(lat2), lon: toDeg(lon2) };
+    }
+
+    function safeStr(v){ const s = (v ?? "").toString().trim(); return s.length ? s : "—"; }
+    function fmtAlt(ft){ return (ft == null || Number.isNaN(ft)) ? "—" : `${Math.round(ft)} ft`; }
+    function fmtKm(km){ return (km == null || Number.isNaN(km)) ? "—" : `${km.toFixed(1)} km`; }
+
+    function pickAltitudeFt(a) {
+      const cand = [a.alt_baro, a.alt_geom, a.altitude, a.baro_altitude, a.geo_altitude];
+      for (const v of cand) {
+        const n = Number(v);
+        if (Number.isFinite(n)) return n;
+      }
+      return null;
+    }
+
+    function pickLatLon(a) {
+      const lat = Number(a.lat ?? a.latitude);
+      const lon = Number(a.lon ?? a.lng ?? a.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+      return null;
+    }
+
+    function pickTrack(a) {
+      const t = Number(a.track ?? a.trk ?? a.heading);
+      return Number.isFinite(t) ? t : null;
+    }
+
+    function kmToNm(km){ return km / 1.852; }
+
+    function buildApiUrl() {
+      const paddedKm = Math.min(80, RADIUS_SHOW_KM * 1.25);
+      const rNm = Math.max(2, Math.ceil(kmToNm(paddedKm)));
+      const url = `https://api.adsb.lol/v2/point/${centre.lat}/${centre.lon}/${rNm}`;
+      return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    }
+
+    // ====== “Will cross into warning ring?” ======
+    // We approximate on a flat plane in metres around the centre using equirectangular projection.
+    function toLocalXYm(lat, lon, originLat, originLon) {
+      const R = 6371000;
+      const x = toRad(lon - originLon) * Math.cos(toRad((lat + originLat)/2)) * R;
+      const y = toRad(lat - originLat) * R;
+      return { x, y };
+    }
+
+    // Segment (p0->p1) intersects circle radius r? (r in metres)
+    function segmentIntersectsCircle(p0, p1, r) {
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
+      const a = dx*dx + dy*dy;
+      if (a === 0) return (p0.x*p0.x + p0.y*p0.y) <= r*r;
+
+      const b = 2 * (p0.x*dx + p0.y*dy);
+      const c = (p0.x*p0.x + p0.y*p0.y) - r*r;
+
+      const disc = b*b - 4*a*c;
+      if (disc < 0) return false;
+
+      const sqrtDisc = Math.sqrt(disc);
+      const t1 = (-b - sqrtDisc) / (2*a);
+      const t2 = (-b + sqrtDisc) / (2*a);
+
+      // intersection occurs within segment if t in [0,1]
+      return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
+    }
+
     // ====== MAP ======
     updateCentreLabel();
+    const map = L.map("map", { zoomControl: false }).setView([centre.lat, centre.lon], 9.5);
 
-    const map = L.map("map", { zoomControl: false }).setView([centre.lat, centre.lon], 12);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
-    const ringShow = L.circle([centre.lat, centre.lon], { radius: RADIUS_SHOW_KM * 1000, weight: 2, opacity: 0.7, fillOpacity: 0.05 }).addTo(map);
-    const ringWarn = L.circle([centre.lat, centre.lon], { radius: RADIUS_WARN_KM * 1000, weight: 2, opacity: 0.9, fillOpacity: 0.08 }).addTo(map);
-    const centreMarker = L.circleMarker([centre.lat, centre.lon], { radius: 6, weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+    const ringShow = L.circle([centre.lat, centre.lon], { radius: RADIUS_SHOW_KM * 1000, weight: 2, opacity: 0.25, fillOpacity: 0.00 }).addTo(map);
+    const ringWarn = L.circle([centre.lat, centre.lon], { radius: RADIUS_WARN_KM * 1000, weight: 2, opacity: 0.65, fillOpacity: 0.00 }).addTo(map);
+    const centreMarker = L.circleMarker([centre.lat, centre.lon], { radius: 4, weight: 2, opacity: 1, fillOpacity: 0.9 }).addTo(map);
 
     function refreshRings() {
       ringShow.setLatLng([centre.lat, centre.lon]).setRadius(RADIUS_SHOW_KM * 1000);
@@ -413,37 +478,105 @@
       map.panTo([centre.lat, centre.lon], { animate: true, duration: 0.5 });
     }
 
-    // aircraft markers by key
-    const markers = new Map();
-    function clearMarkersNotIn(seenKeys) {
-      for (const [key, m] of markers.entries()) {
-        if (!seenKeys.has(key)) { map.removeLayer(m); markers.delete(key); }
+    // Markers & heading lines
+    const markers = new Map();     // key -> circleMarker
+    const vectors = new Map();     // key -> polyline
+    function clearNotIn(seen) {
+      for (const [k, m] of markers.entries()) {
+        if (!seen.has(k)) { map.removeLayer(m); markers.delete(k); }
+      }
+      for (const [k, v] of vectors.entries()) {
+        if (!seen.has(k)) { map.removeLayer(v); vectors.delete(k); }
       }
     }
 
-    // ====== LIST + WARNING ======
+    // ===== Trails =====
+    const trails = new Map();       // key -> [{lat,lon,t}]
+    const trailLayers = new Map();  // key -> layerGroup
+
+    function addTrailPoint(key, lat, lon) {
+      if (!trailsOn) return;
+      const now = Date.now();
+      const arr = trails.get(key) ?? [];
+      arr.push({ lat, lon, t: now });
+      while (arr.length > TRAIL_MAX_POINTS_PER_AC) arr.shift();
+      trails.set(key, arr);
+    }
+
+    function pruneTrailPoints() {
+      const cutoff = Date.now() - TRAIL_MAX_AGE_MS;
+      for (const [key, arr] of trails.entries()) {
+        while (arr.length && arr[0].t < cutoff) arr.shift();
+        if (!arr.length) {
+          trails.delete(key);
+          const layer = trailLayers.get(key);
+          if (layer) { map.removeLayer(layer); trailLayers.delete(key); }
+        } else {
+          trails.set(key, arr);
+        }
+      }
+    }
+
+    function renderTrails() {
+      pruneTrailPoints();
+
+      if (!trailsOn) {
+        for (const [, layer] of trailLayers.entries()) map.removeLayer(layer);
+        trailLayers.clear();
+        trails.clear();
+        return;
+      }
+
+      const now = Date.now();
+      const cutoff = now - TRAIL_MAX_AGE_MS;
+
+      for (const [key, arr] of trails.entries()) {
+        let group = trailLayers.get(key);
+        if (!group) { group = L.layerGroup().addTo(map); trailLayers.set(key, group); }
+        else group.clearLayers();
+
+        for (const p of arr) {
+          const alpha = Math.max(0, Math.min(1, (p.t - cutoff) / TRAIL_MAX_AGE_MS));
+          const radius = 2 + alpha * 2;
+          const fillOpacity = 0.22 * alpha;
+
+          L.circleMarker([p.lat, p.lon], {
+            radius,
+            weight: 0,
+            opacity: 0,
+            fillOpacity,
+            fillColor: "rgba(120,255,120,1)"
+          }).addTo(group);
+        }
+      }
+    }
+
+    // smooth fade
+    setInterval(() => { if (trailsOn) renderTrails(); }, 1000);
+
+    // ===== UI bits =====
     function renderList(items) {
       const list = el("list");
       if (!items.length) {
         list.innerHTML = `<div class="row"><h4>No matching aircraft <span class="muted">—</span></h4>
-          <div class="grid2">
-            <div>Filter</div><div>&lt; ${ALT_MAX_FT} ft, within ${RADIUS_SHOW_KM} km</div>
-          </div></div>`;
+          <div class="grid2"><div>Filter</div><div>&lt; ${ALT_MAX_FT} ft, within ${RADIUS_SHOW_KM} km</div></div></div>`;
         return;
       }
 
       list.innerHTML = items.map(x => {
-        const warnBadge = x.distanceKm <= RADIUS_WARN_KM ? `<span class="badge warn">warning</span>` : `<span class="badge">show</span>`;
+        const badge = x.state === "red" ? `<span class="badge warn">inside</span>`
+                    : x.state === "yellow" ? `<span class="badge pred">crossing</span>`
+                    : `<span class="badge">safe</span>`;
         return `
           <div class="row">
             <h4>
               <span>${safeStr(x.callsign)} <span class="muted">${safeStr(x.hex)}</span></span>
-              ${warnBadge}
+              ${badge}
             </h4>
             <div class="grid2">
               <div>Distance</div><div>${fmtKm(x.distanceKm)}</div>
               <div>Altitude</div><div>${fmtAlt(x.altFt)}</div>
-              <div>Heading</div><div>${headingText(x.track)}</div>
+              <div>Heading</div><div>${x.track != null ? `${Math.round(x.track)}°` : "—"}</div>
               <div>Speed</div><div>${x.speedKt != null ? `${Math.round(x.speedKt)} kt` : "—"}</div>
             </div>
           </div>
@@ -470,15 +603,14 @@
       detail.textContent = itemsWithinWarn.length > 3 ? `${summary} +${itemsWithinWarn.length - 3} more` : summary;
     }
 
-    // ====== DATA ======
+    // ===== DATA =====
     async function fetchAircraft() {
       if (!nowWithinWindow()) {
         setStatus("Paused (outside hours)");
         return { aircraft: [], paused: true };
       }
       setStatus("Updating…");
-      const url = buildApiUrl();
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch(buildApiUrl(), { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const aircraft = data.ac ?? data.aircraft ?? data?.result ?? [];
@@ -487,21 +619,39 @@
 
     function normaliseAndFilter(rawAircraft) {
       const items = [];
+
       for (const a of rawAircraft) {
         const pos = pickLatLon(a);
         if (!pos) continue;
 
         const altFt = pickAltitudeFt(a);
-        if (altFt == null) continue;
-        if (altFt > ALT_MAX_FT) continue;
+        if (altFt == null || altFt > ALT_MAX_FT) continue;
 
         const dKm = distanceKm(centre.lat, centre.lon, pos.lat, pos.lon);
         if (dKm > RADIUS_SHOW_KM) continue;
 
         const hex = (a.hex ?? a.icao ?? a.addr ?? "").toString().trim().toUpperCase() || `${pos.lat},${pos.lon}`;
         const callsign = (a.flight ?? a.callsign ?? a.call ?? "").toString().trim();
-        const track = Number(a.track ?? a.trk ?? a.heading);
+        const track = pickTrack(a);
         const speedKt = Number(a.gs ?? a.spd ?? a.speed ?? a.speed_kts);
+        const speedOk = Number.isFinite(speedKt) ? speedKt : null;
+
+        // Decide state (green/yellow/red)
+        let state = "green";
+
+        if (dKm <= RADIUS_WARN_KM) {
+          state = "red";
+        } else if (track != null) {
+          // If heading vector intersects warning circle, mark yellow
+          const end = destinationPoint(pos.lat, pos.lon, track, VECTOR_LEN_KM);
+
+          const p0 = toLocalXYm(pos.lat, pos.lon, centre.lat, centre.lon);
+          const p1 = toLocalXYm(end.lat, end.lon, centre.lat, centre.lon);
+          const rM = RADIUS_WARN_KM * 1000;
+
+          if (segmentIntersectsCircle(p0, p1, rM)) state = "yellow";
+        }
+
         items.push({
           key: hex,
           hex,
@@ -510,45 +660,82 @@
           lon: pos.lon,
           altFt,
           distanceKm: dKm,
-          track: Number.isFinite(track) ? track : null,
-          speedKt: Number.isFinite(speedKt) ? speedKt : null
+          track,
+          speedKt: speedOk,
+          state
         });
       }
-      items.sort((a, b) => a.distanceKm - b.distanceKm);
+
+      items.sort((a,b) => a.distanceKm - b.distanceKm);
       return items;
     }
 
-    function upsertMarkers(items) {
+    function colourForState(state) {
+      if (state === "red") return "rgba(255,70,70,1)";
+      if (state === "yellow") return "rgba(255,225,90,1)";
+      return "rgba(120,255,120,1)";
+    }
+
+    function upsert(items) {
       const seen = new Set();
+
       for (const x of items) {
         seen.add(x.key);
-        const isWarn = x.distanceKm <= RADIUS_WARN_KM;
 
-        const popupHtml = `
-          <div style="font-family:system-ui,Segoe UI,Roboto,Arial; font-size:12px;">
-            <div style="font-weight:800; margin-bottom:4px;">${safeStr(x.callsign)} <span style="opacity:0.7;">${safeStr(x.hex)}</span></div>
-            <div>Alt: ${fmtAlt(x.altFt)}</div>
-            <div>Dist: ${fmtKm(x.distanceKm)}</div>
-            <div>Hdg: ${headingText(x.track)}</div>
-          </div>
-        `;
+        addTrailPoint(x.key, x.lat, x.lon);
 
+        const color = colourForState(x.state);
+        const isWarn = x.state === "red";
+
+        // aircraft dot
         const existing = markers.get(x.key);
         if (existing) {
           existing.setLatLng([x.lat, x.lon]);
-          existing.setPopupContent(popupHtml);
+          existing.setStyle({
+            color,
+            fillColor: color,
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.95
+          });
           existing.setRadius(isWarn ? 7 : 5);
         } else {
           const m = L.circleMarker([x.lat, x.lon], {
             radius: isWarn ? 7 : 5,
             weight: 2,
             opacity: 1,
-            fillOpacity: 0.9
-          }).addTo(map).bindPopup(popupHtml);
+            fillOpacity: 0.95,
+            color,
+            fillColor: color
+          }).addTo(map);
           markers.set(x.key, m);
         }
+
+        // heading line
+        if (x.track != null) {
+          const end = destinationPoint(x.lat, x.lon, x.track, VECTOR_LEN_KM);
+          const v = vectors.get(x.key);
+          const lineOpts = {
+            weight: 2,
+            opacity: 0.75,
+            color,
+            dashArray: x.state === "yellow" ? "6 6" : null
+          };
+
+          if (v) {
+            v.setLatLngs([[x.lat, x.lon], [end.lat, end.lon]]);
+            v.setStyle(lineOpts);
+          } else {
+            const nl = L.polyline([[x.lat, x.lon],[end.lat, end.lon]], lineOpts).addTo(map);
+            vectors.set(x.key, nl);
+          }
+        } else {
+          const v = vectors.get(x.key);
+          if (v) { map.removeLayer(v); vectors.delete(x.key); }
+        }
       }
-      clearMarkersNotIn(seen);
+
+      clearNotIn(seen);
     }
 
     async function updateOnce() {
@@ -557,23 +744,24 @@
         if (paused) return;
 
         const items = normaliseAndFilter(aircraft);
+
         el("count").textContent = String(items.length);
+        const inside = items.filter(x => x.distanceKm <= RADIUS_WARN_KM);
+        el("countWarn").textContent = String(inside.length);
 
-        const withinWarn = items.filter(x => x.distanceKm <= RADIUS_WARN_KM);
-        el("countWarn").textContent = String(withinWarn.length);
-
-        setWarning(withinWarn);
+        setWarning(inside);
         renderList(items);
-        upsertMarkers(items);
+        upsert(items);
+        renderTrails();
 
         setLastUpdate(new Date());
         setStatus("Live");
-      } catch (err) {
-        setStatus(`Error: ${err.message}`);
+      } catch (e) {
+        setStatus(`Error: ${e.message}`);
       }
     }
 
-    // ====== CONTROLS WIRING ======
+    // ===== Controls =====
     function bindRangeAndNumber(rangeEl, numEl, onChange) {
       const syncFromRange = () => { numEl.value = rangeEl.value; onChange(Number(rangeEl.value)); };
       const syncFromNum   = () => { rangeEl.value = numEl.value; onChange(Number(numEl.value)); };
@@ -581,14 +769,12 @@
       numEl.addEventListener("change", syncFromNum);
     }
 
-    // Altitude
     bindRangeAndNumber(el("altRange"), el("altNum"), (v) => {
       ALT_MAX_FT = Math.max(0, Math.min(5000, v));
       el("altVal").textContent = String(ALT_MAX_FT);
       updateOnce();
     });
 
-    // Show range
     bindRangeAndNumber(el("rangeRange"), el("rangeNum"), (v) => {
       RADIUS_SHOW_KM = Math.max(1, Math.min(50, v));
       el("rangeVal").textContent = String(RADIUS_SHOW_KM);
@@ -597,7 +783,6 @@
       updateOnce();
     });
 
-    // Warn range
     bindRangeAndNumber(el("warnRange"), el("warnNum"), (v) => {
       RADIUS_WARN_KM = Math.max(1, Math.min(25, v));
       clampWarn();
@@ -605,31 +790,25 @@
       updateOnce();
     });
 
-    // Dimmer slider (0..90)
     el("dimRange").addEventListener("input", () => {
-      const v = Number(el("dimRange").value); // 0..90
+      const v = Number(el("dimRange").value);
       document.documentElement.style.setProperty("--dimmer", (v/100).toFixed(2));
     });
 
-    // Night mode toggle
-    let nightOn = true;
     el("btnNight").addEventListener("click", () => {
-      nightOn = !nightOn;
-      document.documentElement.style.setProperty("--night", nightOn ? "1" : "0");
-      el("btnNight").textContent = `Night mode: ${nightOn ? "ON" : "OFF"}`;
-      el("btnNight").classList.toggle("primary", nightOn);
+      const current = getComputedStyle(document.documentElement).getPropertyValue("--night").trim() === "1";
+      document.documentElement.style.setProperty("--night", current ? "0" : "1");
+      el("btnNight").textContent = `Night mode: ${current ? "OFF" : "ON"}`;
+      el("btnNight").classList.toggle("primary", !current);
     });
 
-    // Sweep toggle
-    let sweepOn = true;
     el("btnSweep").addEventListener("click", () => {
-      sweepOn = !sweepOn;
-      document.documentElement.style.setProperty("--sweepOn", sweepOn ? "1" : "0");
-      el("btnSweep").textContent = `Radar sweep: ${sweepOn ? "ON" : "OFF"}`;
-      el("btnSweep").classList.toggle("primary", sweepOn);
+      const current = getComputedStyle(document.documentElement).getPropertyValue("--sweepOn").trim() === "1";
+      document.documentElement.style.setProperty("--sweepOn", current ? "0" : "1");
+      el("btnSweep").textContent = `Radar sweep: ${current ? "OFF" : "ON"}`;
+      el("btnSweep").classList.toggle("primary", !current);
     });
 
-    // Location buttons
     function setCentre(lat, lon, geoFlag) {
       centre = { lat, lon };
       usingGeo = geoFlag;
@@ -645,10 +824,7 @@
     });
 
     el("btnMe").addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        setStatus("Geolocation not supported");
-        return;
-      }
+      if (!navigator.geolocation) { setStatus("Geolocation not supported"); return; }
       setStatus("Requesting location…");
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -656,29 +832,17 @@
           el("btnHQ").classList.remove("primary");
           setCentre(pos.coords.latitude, pos.coords.longitude, true);
         },
-        (err) => {
-          setStatus(`Location denied (${err.code})`);
-        },
+        (err) => setStatus(`Location denied (${err.code})`),
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
       );
     });
 
-    // Initialise visual defaults
-    document.documentElement.style.setProperty("--dimmer", (Number(el("dimRange").value)/100).toFixed(2));
-    document.documentElement.style.setProperty("--night", "1");
-    document.documentElement.style.setProperty("--sweepOn", "1");
-
-    // Clamp warning range against initial show range
-    clampWarn();
-
-    // Start
+    // Init
+    el("dimRange").value = "55";
+    document.documentElement.style.setProperty("--dimmer", "0.55");
     updateOnce();
     setInterval(updateOnce, POLL_MS);
-
-    // Office-hours status flip once a minute
-    setInterval(() => {
-      if (!nowWithinWindow()) setStatus("Paused (outside hours)");
-    }, 60 * 1000);
+    setInterval(() => { if (!nowWithinWindow()) setStatus("Paused (outside hours)"); }, 60 * 1000);
   </script>
 </body>
 </html>
