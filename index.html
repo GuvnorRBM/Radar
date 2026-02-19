@@ -27,9 +27,9 @@
       --muted: rgba(231,238,252,0.70);
       --border: rgba(255,255,255,0.12);
 
-      --green: #39ff14;   /* bright green */
-      --red:   #ff2b2b;   /* bright red */
-      --yellow:#ffe600;   /* bright yellow */
+      --green: #39ff14;
+      --red:   #ff2b2b;
+      --yellow:#ffe600;
       --cyan:  #2dd8ff;
     }
 
@@ -38,209 +38,207 @@
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       overflow: hidden;
     }
 
-    #map {
-      position: absolute;
-      inset: 0;
-      background: #000;
+    #map { position:absolute; inset:0; background:#000; }
+
+    /* IMPORTANT: dim only the base tiles, not overlays */
+    .leaflet-tile-pane {
+      filter: brightness(0.35) contrast(1.25) saturate(0.9);
+    }
+    body.light-tiles .leaflet-tile-pane { filter: brightness(0.55) contrast(1.18) saturate(0.95); }
+    body.no-tiles-dim .leaflet-tile-pane { filter: none; }
+
+    /* Keep overlays crisp and bright */
+    .leaflet-overlay-pane,
+    .leaflet-marker-pane {
+      filter: none !important;
     }
 
-    /* Extra dim overlay to make the map properly dark */
-    .map-dimmer {
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      mix-blend-mode: multiply;
-      z-index: 600;
-      opacity: 1;
-      transition: opacity 180ms ease;
-    }
-    body.light-dimmer .map-dimmer { opacity: 0.18; }
-    body.no-dimmer .map-dimmer { opacity: 0; }
-
-    /* Radar sweep overlay */
-    .radar-overlay {
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
-      z-index: 650;
-      opacity: 0.9;
+    /* Radar sweep canvas sits ABOVE map and ABOVE markers */
+    .radar-overlay{
+      pointer-events:none;
+      position:absolute;
+      inset:0;
+      z-index:2000;
+      opacity: 0.95;
     }
 
-    /* Top title bar */
-    .titlebar {
-      position: absolute;
-      left: 50%;
-      top: 10px;
-      transform: translateX(-50%);
-      z-index: 900;
-      padding: 10px 14px;
+    /* Title bar */
+    .titlebar{
+      position:absolute;
+      left:50%;
+      top:10px;
+      transform:translateX(-50%);
+      z-index:2100;
+      padding:10px 14px;
       background: rgba(10,12,16,0.82);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      border:1px solid var(--border);
+      border-radius:10px;
       backdrop-filter: blur(8px);
-      font-weight: 700;
-      letter-spacing: 0.2px;
+      font-weight: 800;
       box-shadow: 0 12px 28px rgba(0,0,0,0.35);
       white-space: nowrap;
     }
 
-    /* Right control panel */
-    .panel {
-      position: absolute;
-      right: 14px;
-      top: 14px;
-      z-index: 950;
-      width: 360px;
+    /* Right panel */
+    .panel{
+      position:absolute;
+      right:14px;
+      top:14px;
+      z-index:2100;
+      width:360px;
       max-width: calc(100vw - 28px);
       background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
       backdrop-filter: blur(10px);
       box-shadow: 0 18px 44px rgba(0,0,0,0.45);
     }
+    .panel h2{ margin:0 0 8px 0; font-size:14px; font-weight:900; }
+    .kv{ font-size:12px; color:var(--muted); line-height:1.5; }
 
-    .panel h2 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-      font-weight: 800;
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
     }
-
-    .kv {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .field {
+    .field{
       background: var(--panel2);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 10px;
+      padding:10px;
     }
-
-    .field label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .field input[type="number"],
-    .field input[type="text"]{
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.14);
+    .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    .field input[type="number"]{
+      width:100%;
+      box-sizing:border-box;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.14);
       background: rgba(0,0,0,0.35);
       color: var(--text);
-      outline: none;
-      font-size: 13px;
+      outline:none;
+      font-size:13px;
     }
 
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-top: 10px;
-      flex-wrap: wrap;
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:10px;
+      flex-wrap:wrap;
     }
-
-    .btn {
-      cursor: pointer;
-      user-select: none;
-      padding: 9px 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.14);
+    .btn{
+      cursor:pointer;
+      user-select:none;
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.14);
       background: rgba(255,255,255,0.06);
       color: var(--text);
-      font-weight: 700;
-      font-size: 12px;
-    }
-    .btn:hover { background: rgba(255,255,255,0.10); }
-
-    .toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.06);
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .toggle input { transform: translateY(1px); }
-
-    .status {
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(0,0,0,0.35);
-      font-size: 12px;
       font-weight: 800;
+      font-size: 12px;
+    }
+    .btn:hover{ background: rgba(255,255,255,0.10); }
+
+    .toggle{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      font-size:12px;
+      font-weight:800;
+    }
+    .toggle input{ transform: translateY(1px); }
+
+    .status{
+      margin-top:10px;
+      font-size:12px;
+      color: var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      font-size:12px;
+      font-weight:900;
       color: var(--text);
     }
 
-    .legend {
-      margin-top: 10px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--muted);
+    /* ===== Aircraft marker (dot + label box) ===== */
+    .ac-marker{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      transform: translate(-10px, -10px);
+      pointer-events: none; /* keeps map interactions smooth */
     }
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      display: inline-block;
-      margin-right: 8px;
-      vertical-align: middle;
-      box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    .ac-dot{
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      box-shadow:
+        0 0 18px rgba(0,0,0,0.55),
+        0 0 18px currentColor;
+      border: 2px solid rgba(255,255,255,0.25);
+      background: currentColor;
+      flex: 0 0 auto;
+      margin-top: 2px;
+    }
+    .ac-label{
+      min-width: 150px;
+      max-width: 240px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.72);
+      color: rgba(231,238,252,0.92);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+      line-height: 1.25;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ac-label .top{ font-weight: 900; color: #fff; }
+    .ac-label .sub{ opacity: 0.85; font-weight: 700; font-size: 11px; }
+
+    /* Optional: tighter labels on smaller screens */
+    @media (max-width: 900px){
+      .panel{ width: 320px; }
+      .ac-label{ min-width: 120px; max-width: 200px; }
     }
 
-    /* Leaflet tweaks */
-    .leaflet-control-attribution { display:none; }
-    .leaflet-container { background: #000; }
+    .leaflet-control-attribution{ display:none; }
   </style>
 </head>
 
-<body>
+<body class="dark-tiles">
   <div id="map"></div>
-  <div class="map-dimmer"></div>
   <canvas class="radar-overlay" id="radarCanvas"></canvas>
 
   <div class="titlebar" id="titlebar">Head Office Air Picture (for show)</div>
 
   <div class="panel">
     <h2>Controls</h2>
-    <div class="kv" id="kvInfo">
+    <div class="kv">
       Centre: <span id="centreText"></span><br/>
       Filters: under <span id="ceilingText"></span> ft, within <span id="searchText"></span> km, warn within <span id="warnText"></span> km<br/>
       Polling: <span id="pollText"></span> (auto-pauses outside <span id="windowText"></span>)
@@ -275,10 +273,11 @@
 
     <div class="row">
       <span class="toggle"><input type="checkbox" id="useMyLocation" /> Use my location</span>
-      <span class="toggle"><input type="checkbox" id="nightMode" checked /> Night mode</span>
+      <span class="toggle"><input type="checkbox" id="nightMode" checked /> Dark tiles</span>
       <span class="toggle"><input type="checkbox" id="radarSweep" checked /> Radar sweep</span>
       <span class="toggle"><input type="checkbox" id="showVectors" checked /> Heading lines</span>
       <span class="toggle"><input type="checkbox" id="trails" checked /> Trails</span>
+      <span class="toggle"><input type="checkbox" id="labelsOn" checked /> Label boxes</span>
     </div>
 
     <div class="row">
@@ -293,16 +292,11 @@
       <div>Status: <span id="statusText">Idle</span></div>
     </div>
 
-    <div class="legend">
-      <div><span class="dot" style="background: var(--green)"></span>Outside warning</div>
-      <div><span class="dot" style="background: var(--yellow)"></span>Likely to enter warning</div>
-      <div><span class="dot" style="background: var(--red)"></span>Inside warning</div>
-      <div><span class="dot" style="background: #9aa8c7"></span>Filtered out</div>
-    </div>
-
     <div class="kv" style="margin-top:10px;">
-      Data via your Cloudflare Worker proxy.<br/>
-      Tip: for the office wall, leave polling on, and it will auto-pause outside 08:30–17:30 and hard reload every 30 minutes while active.
+      Colouring:<br/>
+      <span style="color:var(--green);font-weight:900;">Green</span> outside warning,
+      <span style="color:var(--yellow);font-weight:900;">Yellow</span> approaching warning,
+      <span style="color:var(--red);font-weight:900;">Red</span> inside warning.
     </div>
   </div>
 
@@ -311,14 +305,8 @@
    CONFIG YOU WILL EDIT
    ============================ */
 const WORKER_BASE = "https://raspy-breeze-3e34.j-wilkinson.workers.dev";
-
-// Head Office default centre (your coords)
 const HQ = { lat: 53.10643205468523, lon: -1.3190169903418059 };
-
-// Active time window (local browser time)
 const ACTIVE_WINDOW = { start: "08:30", end: "17:30" };
-
-// Hard reload cadence while active (minutes)
 const HARD_RELOAD_MINUTES = 30;
 
 /* ============================
@@ -326,14 +314,12 @@ const HARD_RELOAD_MINUTES = 30;
    ============================ */
 let centre = { ...HQ };
 let map, aircraftLayer;
-let searchCircle, warnCircle;
 
+let searchCircle, warnCircle;
 let pollingTimer = null;
 let hardReloadTimer = null;
 
-const markerByHex = new Map();      // hex -> { marker, label, vectorLine, trailLine, trailPts: [{latlng, t}] }
-let lastFetchMs = 0;
-
+const markerByHex = new Map(); // hex -> { marker, vectorLine, trailLine, trailPts }
 let cfg = {
   ceilingFt: 1000,
   searchKm: 10,
@@ -346,27 +332,27 @@ let cfg = {
   radarSweep: true,
   showVectors: true,
   trails: true,
+  labelsOn: true,
 };
 
 function $(id){ return document.getElementById(id); }
-function clamp(n, a, b){ return Math.min(b, Math.max(a, n)); }
+function clamp(n,a,b){ return Math.min(b, Math.max(a, n)); }
+function isNumber(x){ return typeof x === "number" && Number.isFinite(x); }
 function nowIsoTime(){
-  const d = new Date();
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
 }
 function kmToNm(km){ return km / 1.852; }
-function pad2(n){ return String(n).padStart(2, "0"); }
 
 function parseHM(hm){
   const [h,m] = hm.split(":").map(x=>parseInt(x,10));
   return { h, m };
 }
-function isWithinWindow(d = new Date()){
+function isWithinWindow(d=new Date()){
   const s = parseHM(ACTIVE_WINDOW.start);
   const e = parseHM(ACTIVE_WINDOW.end);
-  const mins = d.getHours() * 60 + d.getMinutes();
-  const sMins = s.h * 60 + s.m;
-  const eMins = e.h * 60 + e.m;
+  const mins = d.getHours()*60 + d.getMinutes();
+  const sMins = s.h*60 + s.m;
+  const eMins = e.h*60 + e.m;
   return mins >= sMins && mins <= eMins;
 }
 
@@ -374,39 +360,33 @@ function isWithinWindow(d = new Date()){
    MAP SETUP
    ============================ */
 function initMap(){
-  map = L.map("map", {
-    zoomControl: false,
-    worldCopyJump: true
-  }).setView([centre.lat, centre.lon], 11);
+  map = L.map("map", { zoomControl:false, worldCopyJump:true }).setView([centre.lat, centre.lon], 11);
 
-  // Dark tile (still readable)
-  const tiles = L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    { maxZoom: 19, subdomains: "abcd" }
-  );
-  tiles.addTo(map);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19, subdomains: "abcd"
+  }).addTo(map);
 
   aircraftLayer = L.layerGroup().addTo(map);
 
-  // Rings
+  // Circles are vector overlays, so they remain bright regardless of tile dimming
   searchCircle = L.circle([centre.lat, centre.lon], {
     radius: cfg.searchKm * 1000,
     color: "#3b6cff",
-    weight: 2,
-    opacity: 0.55,
-    fillOpacity: 0.08
+    weight: 3,
+    opacity: 0.9,
+    fillOpacity: 0.05
   }).addTo(map);
 
   warnCircle = L.circle([centre.lat, centre.lon], {
     radius: cfg.warnKm * 1000,
     color: "#ff2b2b",
-    weight: 2,
-    opacity: 0.75,
-    fillOpacity: 0.10
+    weight: 3,
+    opacity: 0.95,
+    fillOpacity: 0.07
   }).addTo(map);
 
   updateUiTexts();
-  applyNightMode();
+  applyTileMode();
 
   map.on("dblclick", (e) => {
     centre = { lat: e.latlng.lat, lon: e.latlng.lng };
@@ -418,14 +398,13 @@ function initMap(){
   requestAnimationFrame(radarLoop);
 }
 
-function setCentre(c, pan = false){
-  // Update circles
+function setCentre(c, pan=false){
   searchCircle.setLatLng([c.lat, c.lon]);
   warnCircle.setLatLng([c.lat, c.lon]);
   searchCircle.setRadius(cfg.searchKm * 1000);
   warnCircle.setRadius(cfg.warnKm * 1000);
 
-  if (pan) map.panTo([c.lat, c.lon], { animate: true, duration: 0.6 });
+  if (pan) map.panTo([c.lat, c.lon], { animate:true, duration:0.6 });
   updateUiTexts();
 }
 
@@ -438,24 +417,30 @@ function updateUiTexts(){
   $("windowText").textContent = `${ACTIVE_WINDOW.start}–${ACTIVE_WINDOW.end}`;
 }
 
+function applyTileMode(){
+  // "nightMode" just controls tile brightness. Markers/overlays unaffected.
+  document.body.classList.remove("light-tiles", "no-tiles-dim");
+  if (cfg.nightMode) {
+    // keep default darker tiles
+  } else {
+    document.body.classList.add("light-tiles");
+  }
+}
+
 /* ============================
    DATA NORMALISATION + FILTERS
    ============================ */
-function isNumber(x){ return typeof x === "number" && Number.isFinite(x); }
-
 function altFt(ac){
   if (ac.alt_baro === "ground") return 0;
   if (isNumber(ac.alt_baro)) return ac.alt_baro;
-  if (isNumber(ac.alt_geom)) return ac.alt_geom; // fallback
+  if (isNumber(ac.alt_geom)) return ac.alt_geom;
   return null;
 }
-
 function trackDeg(ac){
   if (isNumber(ac.track)) return ac.track;
   if (isNumber(ac.true_heading)) return ac.true_heading;
   return null;
 }
-
 function speedKt(ac){
   return isNumber(ac.gs) ? ac.gs : 0;
 }
@@ -465,20 +450,17 @@ function shouldDisplay(ac){
 
   if (isNumber(ac.seen_pos) && ac.seen_pos > cfg.staleSec) return false;
 
-  // bin obvious non-aircraft noise
+  // bin obvious noise
   if (ac.t === "TWR") return false;
 
   const a = altFt(ac);
   if (a === null) return false;
 
-  // stationary ground clutter
   const gs = speedKt(ac);
   if (a === 0 && gs < 5) return false;
 
-  // ceiling filter
   if (a > cfg.ceilingFt) return false;
 
-  // within search radius (km)
   const dKm = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
   if (dKm > cfg.searchKm) return false;
 
@@ -486,7 +468,7 @@ function shouldDisplay(ac){
 }
 
 /* ============================
-   APPROACH LOGIC (THEATRE MODE)
+   APPROACH LOGIC
    ============================ */
 function degToRad(d){ return d * Math.PI / 180; }
 function radToDeg(r){ return r * 180 / Math.PI; }
@@ -500,63 +482,87 @@ function projectLatLon(lat, lon, bearingDeg, distanceKm){
 
   const lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(br));
   const lon2 = lon1 + Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(lat1), Math.cos(d) - Math.sin(lat1)*Math.sin(lat2));
-
   return { lat: radToDeg(lat2), lon: radToDeg(lon2) };
 }
 
 function isApproachingWarning(ac){
-  // "Approaching" = currently outside warning, projected point within warning
   const trk = trackDeg(ac);
   const gs = speedKt(ac);
-
-  if (!isNumber(trk) || gs < 30) return false; // ignore slow movers
+  if (!isNumber(trk) || gs < 30) return false;
 
   const d0Km = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
   if (d0Km <= cfg.warnKm) return false;
 
-  const aheadKm = 20; // theatre lookahead distance
+  const aheadKm = 20;
   const p1 = projectLatLon(ac.lat, ac.lon, trk, aheadKm);
   const d1Km = map.distance([centre.lat, centre.lon], [p1.lat, p1.lon]) / 1000;
-
   return d1Km <= cfg.warnKm;
-}
-
-/* ============================
-   RENDERING
-   ============================ */
-function colourFor(ac){
-  const dKm = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
-
-  if (dKm <= cfg.warnKm) return getCss("--red"); // inside warning
-  if (isApproachingWarning(ac)) return getCss("--yellow");
-  return getCss("--green");
 }
 
 function getCss(varName){
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
-
-function markerRadiusFor(ac){
-  // a touch bigger for closer aircraft, and helicopters are often the fun stuff
+function colourFor(ac){
   const dKm = map.distance([centre.lat, centre.lon], [ac.lat, ac.lon]) / 1000;
-  let r = 5.5;
-  if (dKm < 5) r = 7.0;
-  if (dKm < 2) r = 8.0;
-  if (String(ac.t || "").includes("H")) r += 0.8;
-  return r;
+  if (dKm <= cfg.warnKm) return getCss("--red");
+  if (isApproachingWarning(ac)) return getCss("--yellow");
+  return getCss("--green");
 }
 
-function labelText(ac){
-  const f = (ac.flight || "").trim();
+/* ============================
+   MARKER HTML (DOT + LABEL BOX)
+   ============================ */
+function safeTxt(s){
+  return String(s ?? "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[m]));
+}
+
+function buildMarkerHtml(ac, col){
+  const flight = (ac.flight || "").trim();
   const reg = (ac.r || "").trim();
   const typ = (ac.t || "").trim();
+
   const a = altFt(ac);
-  const aStr = (a === null) ? "n/a" : (a === 0 ? "GND" : `${Math.round(a)}ft`);
+  const altStr = (a === null) ? "n/a" : (a === 0 ? "GND" : `${Math.round(a)} ft`);
+
+  const trk = trackDeg(ac);
+  const hdgStr = isNumber(trk) ? `${Math.round(trk)}°` : "–";
+
   const gs = speedKt(ac);
-  const gsStr = gs ? `${Math.round(gs)}kt` : "";
-  return `${f || reg || ac.hex}\n${typ}  ${aStr}  ${gsStr}`.trim();
+  const gsStr = gs ? `${Math.round(gs)} kt` : "";
+
+  const top = safeTxt(flight || reg || ac.hex);
+  const sub = safeTxt(`${typ}  ${altStr}  ${hdgStr}  ${gsStr}`.trim());
+
+  // If labels are off, just render the dot
+  if (!cfg.labelsOn) {
+    return `<div class="ac-marker" style="color:${col}"><div class="ac-dot"></div></div>`;
+  }
+
+  return `
+    <div class="ac-marker" style="color:${col}">
+      <div class="ac-dot"></div>
+      <div class="ac-label">
+        <div class="top">${top}</div>
+        <div class="sub">${sub}</div>
+      </div>
+    </div>
+  `.trim();
 }
 
+function makeDivIcon(ac, col){
+  return L.divIcon({
+    className: "",           // we fully style our own HTML
+    html: buildMarkerHtml(ac, col),
+    iconSize: [1, 1],        // size handled by CSS
+    iconAnchor: [0, 0],
+  });
+}
+
+/* ============================
+   RENDERING
+   ============================ */
 function updateAircraft(acList){
   const visibleHex = new Set();
 
@@ -571,37 +577,12 @@ function updateAircraft(acList){
 
     let entry = markerByHex.get(hex);
     if (!entry) {
-      const marker = L.circleMarker(latlng, {
-        radius: markerRadiusFor(ac),
-        color: col,
-        weight: 2,
-        opacity: 0.95,
-        fillColor: col,
-        fillOpacity: 0.85
-      }).addTo(aircraftLayer);
-
-      marker.bindTooltip(labelText(ac), {
-        permanent: false,
-        direction: "top",
-        opacity: 0.95
-      });
-
-      entry = {
-        marker,
-        vectorLine: null,
-        trailLine: null,
-        trailPts: []
-      };
+      const marker = L.marker(latlng, { icon: makeDivIcon(ac, col), interactive: false }).addTo(aircraftLayer);
+      entry = { marker, vectorLine: null, trailLine: null, trailPts: [] };
       markerByHex.set(hex, entry);
     } else {
       entry.marker.setLatLng(latlng);
-      entry.marker.setStyle({
-        radius: markerRadiusFor(ac),
-        color: col,
-        fillColor: col,
-        fillOpacity: 0.85
-      });
-      entry.marker.setTooltipContent(labelText(ac));
+      entry.marker.setIcon(makeDivIcon(ac, col));
     }
 
     // Heading vector
@@ -609,39 +590,34 @@ function updateAircraft(acList){
       const trk = trackDeg(ac);
       const gs = speedKt(ac);
       if (isNumber(trk) && gs >= 20) {
-        const aheadKm = 12; // looks good at your scales
+        const aheadKm = 12;
         const p1 = projectLatLon(ac.lat, ac.lon, trk, aheadKm);
         const lineLatLngs = [latlng, L.latLng(p1.lat, p1.lon)];
         if (!entry.vectorLine) {
           entry.vectorLine = L.polyline(lineLatLngs, {
             color: col,
-            weight: 2,
-            opacity: 0.70,
+            weight: 3,
+            opacity: 0.85,
             dashArray: "6 8"
           }).addTo(aircraftLayer);
         } else {
           entry.vectorLine.setLatLngs(lineLatLngs);
-          entry.vectorLine.setStyle({ color: col, opacity: 0.70 });
+          entry.vectorLine.setStyle({ color: col, opacity: 0.85, weight: 3 });
         }
-      } else {
-        if (entry.vectorLine) {
-          aircraftLayer.removeLayer(entry.vectorLine);
-          entry.vectorLine = null;
-        }
-      }
-    } else {
-      if (entry.vectorLine) {
+      } else if (entry.vectorLine) {
         aircraftLayer.removeLayer(entry.vectorLine);
         entry.vectorLine = null;
       }
+    } else if (entry.vectorLine) {
+      aircraftLayer.removeLayer(entry.vectorLine);
+      entry.vectorLine = null;
     }
 
-    // Trails (fade by time)
+    // Trails
     if (cfg.trails) {
       const tNow = Date.now();
       entry.trailPts.push({ latlng, t: tNow });
 
-      // keep last 2 minutes
       const keepMs = 120000;
       entry.trailPts = entry.trailPts.filter(p => (tNow - p.t) <= keepMs);
 
@@ -650,12 +626,12 @@ function updateAircraft(acList){
       if (!entry.trailLine) {
         entry.trailLine = L.polyline(latlngs, {
           color: col,
-          weight: 2,
-          opacity: 0.35
+          weight: 3,
+          opacity: 0.40
         }).addTo(aircraftLayer);
       } else {
         entry.trailLine.setLatLngs(latlngs);
-        entry.trailLine.setStyle({ color: col, opacity: 0.35 });
+        entry.trailLine.setStyle({ color: col, opacity: 0.40, weight: 3 });
       }
     } else {
       if (entry.trailLine) {
@@ -683,8 +659,7 @@ function updateAircraft(acList){
    FETCHING
    ============================ */
 async function fetchAircraft(){
-  const active = isWithinWindow();
-  if (!active) {
+  if (!isWithinWindow()) {
     $("statusText").textContent = "Paused (outside hours)";
     return;
   }
@@ -702,12 +677,11 @@ async function fetchAircraft(){
     const list = Array.isArray(data.ac) ? data.ac : [];
     updateAircraft(list);
 
-    lastFetchMs = Date.now();
     $("lastUpdate").textContent = nowIsoTime();
     $("statusText").textContent = `OK (${list.length} raw)`;
   } catch (e) {
-    $("statusText").textContent = "Error";
     console.error(e);
+    $("statusText").textContent = "Error";
   }
 }
 
@@ -716,15 +690,10 @@ async function fetchAircraft(){
    ============================ */
 function startPolling(){
   stopPolling();
-
-  // First tick immediately (if within hours)
   fetchAircraft();
 
-  pollingTimer = setInterval(() => {
-    fetchAircraft();
-  }, cfg.pollSec * 1000);
+  pollingTimer = setInterval(fetchAircraft, cfg.pollSec * 1000);
 
-  // Hard reload every 30 mins while active (to mimic DroneDesk’s timeout handling)
   hardReloadTimer = setInterval(() => {
     if (isWithinWindow()) location.reload();
   }, HARD_RELOAD_MINUTES * 60 * 1000);
@@ -738,9 +707,9 @@ function stopPolling(){
 }
 
 /* ============================
-   RADAR SWEEP (THEATRE)
+   RADAR SWEEP (ABOVE EVERYTHING)
    ============================ */
-let radarCtx, radarW = 0, radarH = 0;
+let radarCtx;
 let sweepAngle = 0;
 
 function setupRadarCanvas(){
@@ -748,8 +717,8 @@ function setupRadarCanvas(){
   radarCtx = c.getContext("2d");
 
   function resize(){
-    radarW = c.width = window.innerWidth * devicePixelRatio;
-    radarH = c.height = window.innerHeight * devicePixelRatio;
+    c.width = Math.floor(window.innerWidth * devicePixelRatio);
+    c.height = Math.floor(window.innerHeight * devicePixelRatio);
     c.style.width = window.innerWidth + "px";
     c.style.height = window.innerHeight + "px";
     radarCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
@@ -766,53 +735,40 @@ function radarLoop(){
     return;
   }
 
-  // Only animate sweep when active hours, otherwise keep it calm
-  const active = isWithinWindow();
-  const speed = active ? (Math.PI * 2) / (cfg.sweepSec * 60) : (Math.PI * 2) / (12 * 60); // radians per frame-ish
-
-  // Fade previous frame for ghosting
-  radarCtx.fillStyle = "rgba(0,0,0,0.12)";
+  // soft persistence
+  radarCtx.fillStyle = "rgba(0,0,0,0.10)";
   radarCtx.fillRect(0,0,window.innerWidth, window.innerHeight);
 
-  // Centre in screen space is map centre in pixels
-  const centreLatLng = L.latLng(centre.lat, centre.lon);
-  const centrePx = map.latLngToContainerPoint(centreLatLng);
+  const centrePx = map.latLngToContainerPoint([centre.lat, centre.lon]);
+  const maxR = Math.min(window.innerWidth, window.innerHeight) * 0.55;
 
-  // Concentric rings for effect
+  // rings
   radarCtx.save();
   radarCtx.strokeStyle = "rgba(255,255,255,0.10)";
   radarCtx.lineWidth = 1;
-
-  const maxR = Math.min(window.innerWidth, window.innerHeight) * 0.55;
   for (let i=1;i<=6;i++){
     radarCtx.beginPath();
     radarCtx.arc(centrePx.x, centrePx.y, (maxR*i)/6, 0, Math.PI*2);
     radarCtx.stroke();
   }
 
-  // Crosshairs
+  // crosshair
   radarCtx.strokeStyle = "rgba(255,255,255,0.12)";
-  radarCtx.beginPath();
-  radarCtx.moveTo(centrePx.x - maxR, centrePx.y);
-  radarCtx.lineTo(centrePx.x + maxR, centrePx.y);
-  radarCtx.stroke();
-  radarCtx.beginPath();
-  radarCtx.moveTo(centrePx.x, centrePx.y - maxR);
-  radarCtx.lineTo(centrePx.x, centrePx.y + maxR);
-  radarCtx.stroke();
+  radarCtx.beginPath(); radarCtx.moveTo(centrePx.x-maxR, centrePx.y); radarCtx.lineTo(centrePx.x+maxR, centrePx.y); radarCtx.stroke();
+  radarCtx.beginPath(); radarCtx.moveTo(centrePx.x, centrePx.y-maxR); radarCtx.lineTo(centrePx.x, centrePx.y+maxR); radarCtx.stroke();
 
-  // Sweep wedge
+  // sweep
+  const speed = isWithinWindow() ? (Math.PI*2) / (cfg.sweepSec * 60) : (Math.PI*2) / (12*60);
   sweepAngle += speed;
-  if (sweepAngle > Math.PI * 2) sweepAngle -= Math.PI * 2;
+  if (sweepAngle > Math.PI*2) sweepAngle -= Math.PI*2;
 
-  const wedge = Math.PI / 10; // wedge width
+  const wedge = Math.PI / 10;
   const start = sweepAngle - wedge/2;
   const end = sweepAngle + wedge/2;
 
-  // Green-ish sweep
   const grad = radarCtx.createRadialGradient(centrePx.x, centrePx.y, 0, centrePx.x, centrePx.y, maxR);
   grad.addColorStop(0, "rgba(57,255,20,0.00)");
-  grad.addColorStop(0.25, "rgba(57,255,20,0.08)");
+  grad.addColorStop(0.22, "rgba(57,255,20,0.10)");
   grad.addColorStop(1, "rgba(57,255,20,0.00)");
 
   radarCtx.fillStyle = grad;
@@ -826,43 +782,20 @@ function radarLoop(){
 }
 
 /* ============================
-   UI + SETTINGS
+   SETTINGS
    ============================ */
-function applyNightMode(){
-  // This only controls the extra dimmer overlay intensity
-  if (cfg.nightMode) {
-    document.body.classList.remove("no-dimmer");
-    document.body.classList.remove("light-dimmer");
-  } else {
-    document.body.classList.add("light-dimmer");
-  }
-}
-
 function loadSettings(){
   try {
-    const raw = localStorage.getItem("airPictureCfgV1");
+    const raw = localStorage.getItem("airPictureCfgV2");
     if (!raw) return;
     const s = JSON.parse(raw);
-
-    // Merge known keys only
-    for (const k of Object.keys(cfg)) {
-      if (k in s) cfg[k] = s[k];
-    }
-
-    // Restore centre if saved
-    if (s.centre && isNumber(s.centre.lat) && isNumber(s.centre.lon)) {
-      centre = { lat: s.centre.lat, lon: s.centre.lon };
-    }
+    for (const k of Object.keys(cfg)) if (k in s) cfg[k] = s[k];
+    if (s.centre && isNumber(s.centre.lat) && isNumber(s.centre.lon)) centre = { ...s.centre };
   } catch {}
 }
 
 function saveSettings(){
-  try {
-    localStorage.setItem("airPictureCfgV1", JSON.stringify({
-      ...cfg,
-      centre
-    }));
-  } catch {}
+  try { localStorage.setItem("airPictureCfgV2", JSON.stringify({ ...cfg, centre })); } catch {}
 }
 
 function readUiIntoCfg(){
@@ -878,6 +811,7 @@ function readUiIntoCfg(){
   cfg.radarSweep = $("radarSweep").checked;
   cfg.showVectors = $("showVectors").checked;
   cfg.trails = $("trails").checked;
+  cfg.labelsOn = $("labelsOn").checked;
 }
 
 function writeCfgToUi(){
@@ -893,14 +827,14 @@ function writeCfgToUi(){
   $("radarSweep").checked = cfg.radarSweep;
   $("showVectors").checked = cfg.showVectors;
   $("trails").checked = cfg.trails;
+  $("labelsOn").checked = cfg.labelsOn;
 
   updateUiTexts();
-  applyNightMode();
+  applyTileMode();
 }
 
 async function maybeSetMyLocation(){
   if (!cfg.useMyLocation) return;
-
   if (!navigator.geolocation) return;
 
   return new Promise((resolve) => {
@@ -916,9 +850,6 @@ async function maybeSetMyLocation(){
   });
 }
 
-/* ============================
-   BOOT
-   ============================ */
 function wireUi(){
   $("applyBtn").addEventListener("click", async () => {
     readUiIntoCfg();
@@ -926,14 +857,12 @@ function wireUi(){
 
     setCentre(centre, false);
 
-    // update circles
     searchCircle.setRadius(cfg.searchKm * 1000);
     warnCircle.setRadius(cfg.warnKm * 1000);
 
-    applyNightMode();
+    applyTileMode();
     saveSettings();
 
-    // clear existing and restart
     aircraftLayer.clearLayers();
     markerByHex.clear();
 
@@ -941,27 +870,26 @@ function wireUi(){
   });
 
   $("recenterBtn").addEventListener("click", () => {
-    map.setView([centre.lat, centre.lon], map.getZoom(), { animate: true, duration: 0.6 });
+    map.setView([centre.lat, centre.lon], map.getZoom(), { animate:true, duration:0.6 });
   });
 
   $("reloadBtn").addEventListener("click", () => location.reload());
 
-  // auto pause/resume without user intervention
+  // keep status honest
   setInterval(() => {
-    // keep status honest even if no fetch is happening
-    if (!isWithinWindow()) {
-      $("statusText").textContent = "Paused (outside hours)";
-    }
+    if (!isWithinWindow()) $("statusText").textContent = "Paused (outside hours)";
   }, 5000);
 }
 
+/* ============================
+   BOOT
+   ============================ */
 (async function main(){
   loadSettings();
   initMap();
   wireUi();
   writeCfgToUi();
 
-  // If user wants "use my location", do it at boot too
   await maybeSetMyLocation();
   map.setView([centre.lat, centre.lon], 11);
   setCentre(centre, false);
