@@ -1,10 +1,81 @@
 <!doctype html>
+<html lang="en">
 <html lang="en-GB">
 <head>
   <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Secur-IT ADS-B Tracking</title>
+
+  <!-- Leaflet (NO integrity hashes to avoid SRI blocking) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Drone Flight Time Estimato v1.3r</title>
   <style>
+    :root{
+      --tile-brightness: 0.85;
+      --ui-bg: rgba(12, 14, 18, 0.88);
+      --ui-border: rgba(255,255,255,0.12);
+      --ui-text: rgba(255,255,255,0.92);
+      --ui-muted: rgba(255,255,255,0.65);
+
+      --green: #33ff66;
+      --yellow: #ffe24a;
+      --red: #ff2b2b;
+      --ring: rgba(255,255,255,0.55);
+      --crosshair: rgba(255,255,255,0.35);
+    }
+
+    html, body { height: 100%; margin: 0; background: #000; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    #wrap { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 360px; }
+    #map { position: relative; height: 100vh; width: 100%; background:#000; }
+
+    /* Tile brightness control */
+    .leaflet-tile-pane{
+      filter: brightness(var(--tile-brightness)) contrast(1.08) saturate(1.05);
+      transition: filter 150ms linear;
+    }
+
+    /* Ensure our layers stay on top */
+    .leaflet-pane.leaflet-overlay-pane { z-index: 420; }
+    .leaflet-pane.leaflet-marker-pane  { z-index: 520; }
+    .leaflet-pane.leaflet-tooltip-pane { z-index: 650; }
+    .leaflet-pane.leaflet-popup-pane   { z-index: 700; }
+
+    .titlebar{
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      color: var(--ui-text);
+      background: rgba(12,14,18,0.82);
+      border: 1px solid var(--ui-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* Debug banner if anything fails */
+    #fatal {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 2500;
+      max-width: min(720px, 92vw);
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,80,80,0.45);
+      background: rgba(0,0,0,0.65);
+      color: rgba(255,255,255,0.92);
+      font-size: 12px;
     :root { --gap: 12px; --radius: 12px; }
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -12,12 +83,46 @@
       background: #0b0c10;
       color: #e8e8ea;
       line-height: 1.35;
+      display: none;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+      white-space: pre-wrap;
     }
+
+    #panel{
+      height: 100vh;
+      padding: 14px 14px 14px 10px;
+      background: radial-gradient(1200px 800px at 50% 0%, rgba(80,120,255,0.06), transparent 55%),
+                  linear-gradient(180deg, rgba(0,0,0,0.88), rgba(0,0,0,0.96));
+      border-left: 1px solid rgba(255,255,255,0.06);
+      color: var(--ui-text);
+      overflow: auto;
+    }
+
+    .card{
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .card + .card { margin-top: 12px; }
+
+    .panel-title{
+      display:flex; align-items:center; justify-content:space-between;
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.25px;
     header {
       padding: 18px 16px;
       background: #12131a;
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
+
+    .meta{
+      font-size: 12px;
+      color: var(--ui-muted);
+      line-height: 1.4;
     header h1 { margin: 0 0 6px 0; font-size: 18px; font-weight: 900; }
     header p { margin: 0; opacity: 0.92; font-size: 13px; }
     main { padding: 16px; max-width: 860px; margin: 0 auto; }
@@ -28,19 +133,53 @@
       padding: 14px;
       margin-bottom: 14px;
     }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .field label{
+      display:block;
+      font-size: 12px;
+      color: var(--ui-muted);
+      margin-bottom: 6px;
+    }
+    .field input{
     .grid { display: grid; gap: var(--gap); grid-template-columns: 1fr; }
     @media (min-width: 720px) { .grid.two { grid-template-columns: 1fr 1fr; } .grid.three { grid-template-columns: 1fr 1fr 1fr; } }
     label { display: block; font-size: 13px; margin-bottom: 6px; opacity: 0.9; }
     input[type="number"], select {
       width: 100%;
+      box-sizing: border-box;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.12);
       padding: 12px;
       border-radius: 10px;
+      padding: 10px 10px;
+      color: var(--ui-text);
       border: 1px solid rgba(255,255,255,0.14);
       background: #0e0f14;
       color: #e8e8ea;
       outline: none;
+      font-size: 13px;
+    }
+    .field input[type="range"]{ padding: 0; height: 34px; }
+
+    .toggles{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
       box-sizing: border-box;
     }
+    .toggle{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
     input[type="checkbox"] { transform: scale(1.15); }
     .row { display: flex; gap: 10px; align-items: center; }
     .muted { opacity: 0.75; font-size: 12px; }
@@ -50,10 +189,18 @@
       border-radius: 999px;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.35);
+      user-select: none;
       font-size: 12px;
       margin-right: 8px;
       margin-top: 6px;
     }
+    .toggle input{ transform: scale(1.05); }
+    .toggle span{ font-size: 12px; color: var(--ui-text); }
+
+    .actions{
+      display:flex;
+      gap: 10px;
     .big { font-size: 22px; font-weight: 950; margin: 6px 0 10px 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
@@ -61,15 +208,38 @@
     .right { text-align: right; }
     .warn {
       margin-top: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .btn{
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      color: var(--ui-text);
       padding: 10px 12px;
       border-radius: 10px;
+      padding: 9px 10px;
       border: 1px solid rgba(255, 195, 0, 0.25);
       background: rgba(255, 195, 0, 0.08);
       font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
       opacity: 0.98;
     }
+    .btn.primary{
+      border-color: rgba(120,170,255,0.55);
+      box-shadow: 0 0 0 1px rgba(120,170,255,0.12) inset;
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    .status-row{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
     .stop {
       margin-top: 10px;
+      font-size: 12px;
+      color: var(--ui-muted);
       padding: 12px;
       border-radius: 12px;
       border: 1px solid rgba(255, 80, 80, 0.35);
@@ -77,11 +247,62 @@
       font-size: 13px;
       display: none;
     }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
     button {
       width: 100%;
       padding: 12px;
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.35);
+      color: var(--ui-text);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .ac-dot.green{ filter: drop-shadow(0 0 10px rgba(51,255,102,0.65)) drop-shadow(0 0 16px rgba(51,255,102,0.25)); }
+    .ac-dot.yellow{ filter: drop-shadow(0 0 10px rgba(255,226,74,0.70)) drop-shadow(0 0 16px rgba(255,226,74,0.25)); }
+    .ac-dot.red{ filter: drop-shadow(0 0 10px rgba(255,43,43,0.70)) drop-shadow(0 0 16px rgba(255,43,43,0.25)); }
+
+    .ac-label{
+      background: rgba(0,0,0,0.60);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.92);
+      padding: 6px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      line-height: 1.15;
+      white-space: nowrap;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.35);
+      pointer-events: none;
+    }
+    .ac-label .muted{ color: rgba(255,255,255,0.70); font-weight: 600; }
+    .ac-label .strong{ font-weight: 800; }
+
+    .overlay-canvas{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index: 1500;
+    }
+
+    .legend{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--ui-muted);
+      line-height: 1.4;
+    }
+    .legend .g{ color: var(--green); font-weight: 900; }
+    .legend .y{ color: var(--yellow); font-weight: 900; }
+    .legend .r{ color: var(--red); font-weight: 900; }
+
+    @media (max-width: 980px){
+      #wrap { grid-template-columns: 1fr; }
+      #panel { height: auto; }
       background: rgba(255,255,255,0.10);
       color: #e8e8ea;
       font-weight: 850;
@@ -93,6 +314,11 @@
 </head>
 
 <body>
+  <div id="wrap">
+    <div id="map">
+      <div class="titlebar">Secur-IT ADS-B Tracking</div>
+      <canvas id="overlay" class="overlay-canvas"></canvas>
+      <div id="fatal"></div>
   <header>
     <h1>Drone Flight Time Estimator</h1>
     <p><b>Estimator for flight time only.</b> This does not include pre-surveys, permissions/authorisations, setup/take-down, on-site delays, or post-mission processing.</p>
@@ -106,6 +332,11 @@
       </div>
     </div>
 
+    <div id="panel">
+      <div class="card">
+        <div class="panel-title">
+          <span>Controls</span>
+          <span class="pill" id="visiblePill">Visible: 0</span>
     <div class="card">
       <div class="grid two">
         <div>
@@ -121,6 +352,10 @@
           <div class="muted" style="margin-top:6px;">Perimeter drives the estimate. Area is derived using the selected shape.</div>
         </div>
 
+        <div class="meta" id="metaLine">
+          Centre: <span id="centreText"></span><br/>
+          Filters: under <span id="ceilingText"></span> ft, within <span id="searchText"></span> km, warn within <span id="warnText"></span> km<br/>
+          Polling: <span id="pollText"></span>
         <div>
           <label for="shape">Perimeter type</label>
           <select id="shape">
@@ -133,6 +368,11 @@
         </div>
       </div>
 
+        <div class="grid">
+          <div class="field">
+            <label for="ceilingFt">Max altitude (ft)</label>
+            <input id="ceilingFt" type="number" min="1000" max="50000" step="500" value="30000" />
+          </div>
       <div class="grid two" style="margin-top:12px;">
         <div>
           <label for="complexity">Complex site, ie power lines, major road, railway etc</label>
@@ -144,6 +384,9 @@
           <div class="muted" style="margin-top:6px;">Applies a multiplier to airborne flight time (not RTK walking time).</div>
         </div>
 
+          <div class="field">
+            <label for="searchKm">Search radius (km)</label>
+            <input id="searchKm" type="number" min="10" max="250" step="5" value="100" />
         <div>
           <label>Within 5 miles of an Airport, Prison or MOD facility?</label>
           <div class="row">
@@ -154,11 +397,19 @@
         </div>
       </div>
 
+          <div class="field">
+            <label for="warnKm">Warning radius (km)</label>
+            <input id="warnKm" type="number" min="1" max="50" step="1" value="5" />
+          </div>
       <div class="stop" id="nearStop">
         <b>Restricted proximity flag.</b><br />
         This job may require additional checks / authorisation. Please contact the <b>UAS Department</b> before proceeding further.
       </div>
 
+          <div class="field">
+            <label for="staleSec">Max stale (sec)</label>
+            <input id="staleSec" type="number" min="5" max="120" step="5" value="30" />
+          </div>
       <div class="stop" id="complexStop">
         <b>Complex site selected.</b><br />
         This estimator is not suitable for complex geometry (multiple compounds, voids, internal boundaries, segmented work areas, etc).
@@ -166,6 +417,9 @@
       </div>
     </div>
 
+          <div class="field">
+            <label for="pollSec">Poll interval (sec)</label>
+            <input id="pollSec" type="number" min="5" max="60" step="1" value="10" />
     <div class="card">
       <div class="grid two">
         <div>
@@ -176,6 +430,10 @@
           <div class="muted">Additive to baseline.</div>
         </div>
 
+          <div class="field">
+            <label for="sweepSec">Radar sweep (sec)</label>
+            <input id="sweepSec" type="number" min="3" max="20" step="1" value="6" />
+          </div>
         <div>
           <label for="thermalMode">Thermal requirement</label>
           <select id="thermalMode">
@@ -187,6 +445,9 @@
         </div>
       </div>
 
+          <div class="field">
+            <label for="tileBrightness">Map brightness</label>
+            <input id="tileBrightness" type="range" min="0.25" max="1.35" step="0.05" value="0.25" />
       <div class="grid two" style="margin-top:12px;">
         <div>
           <div class="row">
@@ -196,6 +457,9 @@
           <div class="muted">Perimeter flight time plus 5 stops of 3 mins.</div>
         </div>
 
+          <div class="field">
+            <label for="lookAheadSec">Heading look-ahead (sec)</label>
+            <input id="lookAheadSec" type="number" min="15" max="240" step="15" value="90" />
         <div>
           <div class="row">
             <input id="hiResBuilding3d" type="checkbox" />
@@ -205,6 +469,18 @@
         </div>
       </div>
 
+        <div class="toggles">
+          <label class="toggle"><input id="useMyLocation" type="checkbox" /><span>Use my location</span></label>
+          <label class="toggle"><input id="darkTiles" type="checkbox" /><span>Dark tiles</span></label>
+
+          <label class="toggle"><input id="radarSweep" type="checkbox" checked /><span>Radar sweep</span></label>
+          <label class="toggle"><input id="vectors" type="checkbox" checked /><span>Heading lines</span></label>
+
+          <label class="toggle"><input id="trails" type="checkbox" checked /><span>Trails</span></label>
+          <label class="toggle"><input id="labels" type="checkbox" checked /><span>Label boxes</span></label>
+
+          <label class="toggle"><input id="timeGate" type="checkbox" checked /><span>Office hours only</span></label>
+          <label class="toggle"><input id="pauseOutside" type="checkbox" checked /><span>Auto-pause outside hours</span></label>
       <div class="grid two" style="margin-top:12px;">
         <div>
           <div class="row">
@@ -215,16 +491,31 @@
         </div>
       </div>
 
+        <div class="actions">
+          <button class="btn primary" id="applyBtn">Apply</button>
+          <button class="btn" id="recenterBtn">Re-centre</button>
+          <button class="btn" id="reloadBtn">Hard reload</button>
+          <span class="pill" id="statusPill">Status: starting</span>
+        </div>
       <div class="warn">
         Battery swaps are counted as <code>floor(airborne_minutes / 38)</code> and charged at <b>15 mins</b> each.
         Total output is rounded <b>up</b> to the nearest <b>15 mins</b>.
       </div>
     </div>
 
+        <div class="status-row">
+          <div>Last update: <span id="lastUpdate">--:--:--</span></div>
+          <div>Source: <span id="sourceText">Airplanes.live (via Worker)</span></div>
+        </div>
     <div class="card" id="resultsCard" aria-live="polite">
       <div class="muted">Results</div>
       <div class="big" id="totalTime">Enter a perimeter to calculate</div>
 
+        <div class="legend">
+          Colouring: <span class="g">Green</span> outside warning,
+          <span class="y">Yellow</span> predicted to enter warning,
+          <span class="r">Red</span> inside warning.
+        </div>
       <div>
         <span class="pill" id="shapePill">Shape: -</span>
         <span class="pill" id="multPill">Shape multiplier: -</span>
@@ -232,6 +523,17 @@
         <span class="pill" id="complexityPill">Site multiplier: 1.0×</span>
       </div>
 
+      <div class="card">
+        <div class="panel-title"><span>Endpoint</span><span class="pill">CORS-safe</span></div>
+        <div class="meta">
+          Worker URL:
+          <div style="margin-top:8px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.85);">
+            <span id="endpointText"></span>
+          </div>
+          <div style="margin-top:10px;color:rgba(255,255,255,0.6);font-size:12px;">
+            Note: Airplanes.live is rate limited to 1 request/second.
+          </div>
+        </div>
       <div>
         <span class="pill" id="airbornePill">Airborne: 0 mins</span>
         <span class="pill" id="swapPill">Swaps: 0 (0 mins)</span>
@@ -259,6 +561,326 @@
         Reminder: flight-time estimate only, no pre-survey, setup/take-down, delays, or processing.
       </div>
     </div>
+  </div>
+
+<script>
+/* =========================
+   SAFETY: show errors on-screen
+   ========================= */
+function fatal(msg){
+  const el = document.getElementById("fatal");
+  el.style.display = "block";
+  el.textContent = "Radar failed to start:\n" + msg + "\n\nOpen DevTools → Console for the exact error.";
+}
+window.addEventListener("error", (e) => fatal(e.message || String(e.error || e)));
+window.addEventListener("unhandledrejection", (e) => fatal(e.reason ? String(e.reason) : "Unhandled promise rejection"));
+
+/* =========================
+   CONFIG
+   ========================= */
+const HEAD_OFFICE = { lat: 53.10643205468523, lon: -1.3190169903418059 };
+const WORKER_BASE = "https://raspy-breeze-3e34.j-wilkinson.workers.dev";
+
+let cfg = {
+  centreMode: "headoffice",
+  ceilingFt: 30000,
+  searchKm: 100,
+  warnKm: 5,
+  staleSec: 30,
+  pollSec: 10,
+  sweepSec: 6,
+  lookAheadSec: 90,
+  tileBrightness: 0.40,
+
+  darkTiles: false,
+  radarSweep: true,
+  vectors: true,
+  trails: true,
+  labels: true,
+
+  officeHoursOnly: true,
+  autoPauseOutside: true,
+  officeStart: "08:30",
+  officeEnd: "17:30"
+};
+
+// Runtime
+let centre = { ...HEAD_OFFICE };
+let myLocation = null;
+
+let map, tilesLight, tilesDark;
+let aircraftLayer, labelLayer, vectorLayer;
+let circles = { search: null, warn: null };
+
+let acByHex = new Map(); // hex -> { marker, label, vector, lastSeenMs, trail }
+let pollTimer = null;
+
+let overlayCanvas, overlayCtx;
+let sweepPhase = 0;
+let lastFrame = performance.now();
+
+const $ = (id) => document.getElementById(id);
+
+function setStatus(text, ok=true){
+  const pill = $("statusPill");
+  pill.textContent = `Status: ${text}`;
+  pill.style.borderColor = ok ? "rgba(120,170,255,0.45)" : "rgba(255,80,80,0.55)";
+}
+
+function nowLocalTimeStr(){
+  const d = new Date();
+  return d.toLocaleTimeString(undefined, { hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function kmToNm(km){ return km / 1.852; }
+function knotsToMps(kn){ return kn * 0.514444; }
+
+function altToNumber(alt){
+  if (alt === null || alt === undefined) return null;
+  if (typeof alt === "number") return alt;
+  if (typeof alt === "string"){
+    if (alt.toLowerCase() === "ground") return 0;
+    const n = Number(alt);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+function headingToNumber(h){
+  if (h === null || h === undefined) return null;
+  const n = Number(h);
+  return Number.isFinite(n) ? ((n % 360) + 360) % 360 : null;
+}
+
+function withinOfficeHours(){
+  if (!cfg.officeHoursOnly) return true;
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  const cur = `${hh}:${mm}`;
+  return (cur >= cfg.officeStart && cur <= cfg.officeEnd);
+}
+
+function latLonToMeters(lat, lon, refLat, refLon){
+  const R = 6371000;
+  const rad = Math.PI / 180;
+  const x = (lon - refLon) * rad * R * Math.cos(refLat * rad);
+  const y = (lat - refLat) * rad * R;
+  return { x, y };
+}
+function metersToLatLon(x, y, refLat, refLon){
+  const R = 6371000;
+  const rad = Math.PI / 180;
+  const lat = refLat + (y / R) / rad;
+  const lon = refLon + (x / (R * Math.cos(refLat * rad))) / rad;
+  return { lat, lon };
+}
+
+function predictCrossing(acLat, acLon, headingDeg, speedKnots, lookAheadSec){
+  if (headingDeg == null || speedKnots == null) return { willEnter:false, pEnd:null };
+  const v = knotsToMps(speedKnots);
+  if (!Number.isFinite(v) || v <= 1) return { willEnter:false, pEnd:null };
+
+  const refLat = centre.lat, refLon = centre.lon;
+  const p0 = latLonToMeters(acLat, acLon, refLat, refLon);
+
+  const theta = (headingDeg * Math.PI) / 180;
+  const dir = { x: Math.sin(theta), y: Math.cos(theta) };
+  const vVec = { x: dir.x * v, y: dir.y * v };
+
+  const T = clamp(lookAheadSec, 15, 600);
+  const pEnd = { x: p0.x + vVec.x * T, y: p0.y + vVec.y * T };
+
+  // closest approach check
+  const vv = vVec.x*vVec.x + vVec.y*vVec.y;
+  const tStar = clamp(-(p0.x*vVec.x + p0.y*vVec.y) / vv, 0, T);
+  const pClosest = { x: p0.x + vVec.x * tStar, y: p0.y + vVec.y * tStar };
+  const minDistM = Math.hypot(pClosest.x, pClosest.y);
+  const willEnter = minDistM <= (cfg.warnKm * 1000) + 1;
+
+  return { willEnter, pEnd };
+}
+
+function applyTileBrightness(){
+  document.documentElement.style.setProperty("--tile-brightness", String(cfg.tileBrightness));
+}
+function applyTileMode(){
+  if (cfg.darkTiles){
+    if (map.hasLayer(tilesLight)) map.removeLayer(tilesLight);
+    if (!map.hasLayer(tilesDark)) map.addLayer(tilesDark);
+  } else {
+    if (map.hasLayer(tilesDark)) map.removeLayer(tilesDark);
+    if (!map.hasLayer(tilesLight)) map.addLayer(tilesLight);
+  }
+}
+
+function updateMeta(){
+  $("centreText").textContent = `${centre.lat.toFixed(6)}, ${centre.lon.toFixed(6)}`;
+  $("ceilingText").textContent = `${cfg.ceilingFt}`;
+  $("searchText").textContent = `${cfg.searchKm}`;
+  $("warnText").textContent = `${cfg.warnKm}`;
+  $("pollText").textContent = cfg.officeHoursOnly
+    ? `${cfg.pollSec}s, auto-pauses outside ${cfg.officeStart}-${cfg.officeEnd}`
+    : `${cfg.pollSec}s`;
+  $("endpointText").textContent = `${WORKER_BASE}/point?lat=LAT&lon=LON&radiusNm=NM`;
+}
+
+function readUiIntoCfg(){
+  cfg.ceilingFt = clamp(Number($("ceilingFt").value || 30000), 1000, 50000);
+  cfg.searchKm = clamp(Number($("searchKm").value || 100), 10, 250);
+  cfg.warnKm = clamp(Number($("warnKm").value || 5), 1, 50);
+  cfg.staleSec = clamp(Number($("staleSec").value || 30), 5, 120);
+  cfg.pollSec = clamp(Number($("pollSec").value || 10), 5, 60);
+  cfg.sweepSec = clamp(Number($("sweepSec").value || 6), 3, 20);
+  cfg.lookAheadSec = clamp(Number($("lookAheadSec").value || 90), 15, 240);
+  cfg.tileBrightness = clamp(Number($("tileBrightness").value || 0.85), 0.25, 1.35);
+
+  cfg.darkTiles = $("darkTiles").checked;
+  cfg.radarSweep = $("radarSweep").checked;
+  cfg.vectors = $("vectors").checked;
+  cfg.trails = $("trails").checked;
+  cfg.labels = $("labels").checked;
+
+  cfg.officeHoursOnly = $("timeGate").checked;
+  cfg.autoPauseOutside = $("pauseOutside").checked;
+
+  cfg.centreMode = $("useMyLocation").checked ? "mylocation" : "headoffice";
+}
+
+async function tryGetMyLocation(){
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy:false, timeout:6000, maximumAge:60000 }
+    );
+  });
+}
+async function updateCentreFromMode(){
+  if (cfg.centreMode === "headoffice"){
+    centre = { ...HEAD_OFFICE };
+    return;
+  }
+  myLocation = await tryGetMyLocation();
+  if (myLocation){
+    centre = { ...myLocation };
+  } else {
+    centre = { ...HEAD_OFFICE };
+    cfg.centreMode = "headoffice";
+    $("useMyLocation").checked = false;
+  }
+}
+
+function buildMap(){
+  if (!window.L) throw new Error("Leaflet failed to load (window.L is missing).");
+
+  map = L.map("map", { zoomControl:false, preferCanvas:true }).setView([centre.lat, centre.lon], 9);
+
+  tilesLight = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, opacity:1 });
+  tilesDark  = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom:19, opacity:1 });
+
+  applyTileMode();
+  applyTileBrightness();
+
+  aircraftLayer = L.layerGroup().addTo(map);
+  labelLayer = L.layerGroup().addTo(map);
+  vectorLayer = L.layerGroup().addTo(map);
+
+  circles.search = L.circle([centre.lat, centre.lon], {
+    radius: cfg.searchKm * 1000, color: "rgba(255,255,255,0.45)", weight: 2,
+    fillColor: "rgba(255,255,255,0.07)", fillOpacity: 0.10
+  }).addTo(map);
+
+  circles.warn = L.circle([centre.lat, centre.lon], {
+    radius: cfg.warnKm * 1000, color: "rgba(255,43,43,0.70)", weight: 2,
+    fillColor: "rgba(255,43,43,0.10)", fillOpacity: 0.18
+  }).addTo(map);
+
+  overlayCanvas = $("overlay");
+  overlayCtx = overlayCanvas.getContext("2d");
+
+  function resize(){
+    const r = map.getSize();
+    overlayCanvas.width = Math.floor(r.x * devicePixelRatio);
+    overlayCanvas.height = Math.floor(r.y * devicePixelRatio);
+    overlayCanvas.style.width = r.x + "px";
+    overlayCanvas.style.height = r.y + "px";
+    overlayCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  map.on("resize", resize);
+  resize();
+
+  $("recenterBtn").addEventListener("click", () => map.setView([centre.lat, centre.lon], 9));
+}
+
+function updateRings(){
+  circles.search.setLatLng([centre.lat, centre.lon]);
+  circles.search.setRadius(cfg.searchKm * 1000);
+  circles.warn.setLatLng([centre.lat, centre.lon]);
+  circles.warn.setRadius(cfg.warnKm * 1000);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+}
+
+async function fetchAircraft(){
+  const okToPoll = withinOfficeHours() || !cfg.autoPauseOutside;
+  if (!okToPoll){
+    setStatus("paused (outside hours)", true);
+    return;
+  }
+
+  const radiusNm = clamp(kmToNm(cfg.searchKm), 1, 250).toFixed(2);
+  const url = `${WORKER_BASE}/point?lat=${encodeURIComponent(centre.lat)}&lon=${encodeURIComponent(centre.lon)}&radiusNm=${encodeURIComponent(radiusNm)}`;
+
+  setStatus("fetching...", true);
+
+  const res = await fetch(url, { cache:"no-store" });
+  if (!res.ok) throw new Error(`Worker HTTP ${res.status}`);
+
+  const data = await res.json();
+  $("lastUpdate").textContent = nowLocalTimeStr();
+  renderFromData(data);
+  setStatus("OK", true);
+}
+
+function renderFromData(data){
+  const ac = Array.isArray(data?.ac) ? data.ac : [];
+  const nowMs = Date.now();
+  const seenThis = new Set();
+
+  for (const item of ac){
+    const hex = String(item.hex || "").trim();
+    if (!hex) continue;
+
+    const lat = Number(item.lat);
+    const lon = Number(item.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    const alt = altToNumber(item.alt_baro ?? item.alt_geom);
+    if (alt == null || alt > cfg.ceilingFt) continue;
+
+    const seenPosSec = Number(item.seen_pos);
+    if (Number.isFinite(seenPosSec) && seenPosSec > cfg.staleSec) continue;
+
+    const gs = Number(item.gs);
+    const hdg = headingToNumber(item.true_heading ?? item.track);
+
+    // Prefer API dst (NM) if present, else Leaflet distance
+    let distKm = null;
+    if (Number.isFinite(Number(item.dst))) distKm = Number(item.dst) * 1.852;
+    if (!Number.isFinite(distKm)) distKm = map.distance([centre.lat, centre.lon], [lat, lon]) / 1000;
+
+    const insideWarn = distKm <= cfg.warnKm;
+
+    let willEnter = false;
+    let pEndLL = null;
+    if (!insideWarn && hdg != null && Number.isFinite(gs) && gs > 5){
+      const pred = predictCrossing(lat, lon, hdg, gs, cfg.lookAheadSec);
+      willEnter = pred.willEnter;
+      if (pred.pEnd) pEndLL = metersToLatLon(pred.pEnd.x, pred.pEnd.y, centre.lat, centre.lon);
   </main>
 
   <script>
@@ -340,6 +962,24 @@
       return `${hLabel} ${rem} mins`;
     }
 
+    const colour = insideWarn ? "red" : (willEnter ? "yellow" : "green");
+    seenThis.add(hex);
+
+    let rec = acByHex.get(hex);
+    if (!rec){
+      const cm = L.circleMarker([lat, lon], {
+        radius: 5.5,
+        weight: 2,
+        color: colour === "green" ? "rgba(51,255,102,0.95)" : colour === "yellow" ? "rgba(255,226,74,0.98)" : "rgba(255,43,43,0.98)",
+        fillColor: colour === "green" ? "rgba(51,255,102,1)" : colour === "yellow" ? "rgba(255,226,74,1)" : "rgba(255,43,43,1)",
+        fillOpacity: 1
+      }).addTo(aircraftLayer);
+
+      cm.once("add", () => {
+        const el = cm.getElement();
+        if (el){
+          el.classList.add("ac-dot", colour);
+        }
     function setBlocked(blocked) {
       // Grey out results and prevent interaction with most inputs
       $("resultsCard").style.opacity = blocked ? "0.45" : "1";
@@ -353,10 +993,15 @@
         el.disabled = blocked;
       });
 
+      rec = { marker: cm, label: null, vector: null, lastSeenMs: nowMs, trail: [] };
+      acByHex.set(hex, rec);
       // Allow unchecking to clear
       $("nearRestricted").disabled = false;
     }
 
+    rec.lastSeenMs = nowMs;
+    rec.trail.push({ lat, lon, ts: nowMs });
+    if (rec.trail.length > 60) rec.trail.splice(0, rec.trail.length - 60);
     function renderEmpty() {
       $("totalTime").textContent = "Enter a perimeter to calculate";
       $("shapePill").textContent = "Shape: -";
@@ -371,6 +1016,11 @@
       $("totalMinsCell").textContent = "0";
     }
 
+    rec.marker.setLatLng([lat, lon]);
+    rec.marker.setStyle({
+      color: colour === "green" ? "rgba(51,255,102,0.95)" : colour === "yellow" ? "rgba(255,226,74,0.98)" : "rgba(255,43,43,0.98)",
+      fillColor: colour === "green" ? "rgba(51,255,102,1)" : colour === "yellow" ? "rgba(255,226,74,1)" : "rgba(255,43,43,1)"
+    });
     function renderResults({shapeLabel, shapeMult, areaM2, siteMult, airborneMins, swaps, swapMins, rtkMins, totalRawMins, totalRoundedMins}) {
       $("shapePill").textContent = `Shape: ${shapeLabel}`;
       $("multPill").textContent = `Shape multiplier: ${shapeMult.toFixed(3)}`;
@@ -381,12 +1031,27 @@
       $("swapPill").textContent = `Swaps: ${swaps} (${swapMins} mins)`;
       $("rtkPill").textContent = `RTK walk: ${Math.round(rtkMins)} mins`;
 
+    const el = rec.marker.getElement();
+    if (el){
+      el.classList.remove("green","yellow","red");
+      el.classList.add(colour);
       $("roundedPill").textContent = `Rounded total: ${formatDuration(totalRoundedMins)}`;
       $("totalTime").textContent = `${formatDuration(totalRoundedMins)} (rounded up)`;
 
       $("totalMinsCell").textContent = `${totalRoundedMins}`;
     }
 
+    // vector
+    if (cfg.vectors && pEndLL && hdg != null){
+      const start = [lat, lon];
+      const end = [pEndLL.lat, pEndLL.lon];
+      if (!rec.vector){
+        rec.vector = L.polyline([start, end], {
+          color: colour === "green" ? "rgba(51,255,102,0.55)" : colour === "yellow" ? "rgba(255,226,74,0.65)" : "rgba(255,43,43,0.70)",
+          weight: 2,
+          opacity: 1,
+          dashArray: "6 6"
+        }).addTo(vectorLayer);
     function calc() {
       // Restricted proximity block
       if ($("nearRestricted").checked) {
@@ -395,10 +1060,42 @@
         setBlocked(true);
         return;
       } else {
+        rec.vector.setLatLngs([start, end]);
+        rec.vector.setStyle({
+          color: colour === "green" ? "rgba(51,255,102,0.55)" : colour === "yellow" ? "rgba(255,226,74,0.65)" : "rgba(255,43,43,0.70)"
+        });
         $("nearStop").style.display = "none";
         setBlocked(false);
       }
+    } else if (rec.vector){
+      vectorLayer.removeLayer(rec.vector);
+      rec.vector = null;
+    }
 
+    // label
+    if (cfg.labels){
+      const reg = (item.r || "").trim();
+      const type = (item.t || "").trim();
+      const flight = (item.flight || "").trim();
+      const hdgText = (hdg == null) ? "—" : `${Math.round(hdg)}°`;
+      const altText = `${Math.round(alt)} ft`;
+      const spdText = (Number.isFinite(gs) && gs > 0) ? `${Math.round(gs)} kt` : "—";
+
+      const top = flight || reg || hex.toUpperCase();
+      const line2 = `${type || "UNK"} · ${altText} · ${spdText}`;
+      const line3 = `Hdg ${hdgText}`;
+
+      const html =
+        `<div class="ac-label">
+          <div class="strong">${escapeHtml(top)}</div>
+          <div class="muted">${escapeHtml(line2)}</div>
+          <div class="muted">${escapeHtml(line3)}</div>
+        </div>`;
+
+      const icon = L.divIcon({ className:"", html, iconSize:[1,1], iconAnchor:[-10, 10] });
+
+      if (!rec.label){
+        rec.label = L.marker([lat, lon], { icon, interactive:false }).addTo(labelLayer);
       const shape = $("shape").value;
 
       if (shape === "complex") {
@@ -406,8 +1103,96 @@
         renderEmpty();
         return;
       } else {
+        rec.label.setLatLng([lat, lon]);
+        rec.label.setIcon(icon);
         $("complexStop").style.display = "none";
       }
+    } else if (rec.label){
+      labelLayer.removeLayer(rec.label);
+      rec.label = null;
+    }
+  }
+
+  // prune old
+  const pruneAfterMs = Math.max(cfg.staleSec * 1000, cfg.pollSec * 3000);
+  for (const [hex, rec] of acByHex.entries()){
+    if (seenThis.has(hex)) continue;
+    if ((nowMs - rec.lastSeenMs) > pruneAfterMs){
+      if (rec.marker) aircraftLayer.removeLayer(rec.marker);
+      if (rec.label) labelLayer.removeLayer(rec.label);
+      if (rec.vector) vectorLayer.removeLayer(rec.vector);
+      acByHex.delete(hex);
+    }
+  }
+
+  $("visiblePill").textContent = `Visible: ${acByHex.size}`;
+}
+
+function ringPxPerM(latlng){
+  const p = map.latLngToContainerPoint(latlng);
+  const p2 = L.point(p.x + 100, p.y);
+  const ll2 = map.containerPointToLatLng(p2);
+  const metres = map.distance(latlng, ll2);
+  return 100 / metres;
+}
+
+function drawOverlay(ts){
+  const dt = (ts - lastFrame) / 1000;
+  lastFrame = ts;
+
+  const w = overlayCanvas.clientWidth;
+  const h = overlayCanvas.clientHeight;
+  overlayCtx.clearRect(0, 0, w, h);
+
+  const centrePx = map.latLngToContainerPoint([centre.lat, centre.lon]);
+
+  // crosshair
+  overlayCtx.save();
+  overlayCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--crosshair").trim();
+  overlayCtx.lineWidth = 1;
+  overlayCtx.beginPath(); overlayCtx.moveTo(0, centrePx.y); overlayCtx.lineTo(w, centrePx.y); overlayCtx.stroke();
+  overlayCtx.beginPath(); overlayCtx.moveTo(centrePx.x, 0); overlayCtx.lineTo(centrePx.x, h); overlayCtx.stroke();
+  overlayCtx.restore();
+
+  // rings (visual)
+  const pxPerM = ringPxPerM([centre.lat, centre.lon]);
+  const searchPx = (cfg.searchKm * 1000) * pxPerM;
+  const warnPx = (cfg.warnKm * 1000) * pxPerM;
+
+  overlayCtx.save();
+  overlayCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--ring").trim();
+  overlayCtx.lineWidth = 1.3;
+  for (let i=1;i<=6;i++){
+    const r = (searchPx * i)/6;
+    overlayCtx.beginPath();
+    overlayCtx.arc(centrePx.x, centrePx.y, r, 0, Math.PI*2);
+    overlayCtx.stroke();
+  }
+  overlayCtx.strokeStyle = "rgba(255,43,43,0.75)";
+  overlayCtx.lineWidth = 2;
+  overlayCtx.beginPath();
+  overlayCtx.arc(centrePx.x, centrePx.y, warnPx, 0, Math.PI*2);
+  overlayCtx.stroke();
+  overlayCtx.restore();
+
+  // trails
+  if (cfg.trails){
+    overlayCtx.save();
+    overlayCtx.globalCompositeOperation = "lighter";
+    for (const rec of acByHex.values()){
+      const pts = rec.trail;
+      if (!pts || pts.length < 2) continue;
+      for (let i=1;i<pts.length;i++){
+        const a = i / pts.length;
+        const alpha = 0.05 + a*0.35;
+        const p0 = map.latLngToContainerPoint([pts[i-1].lat, pts[i-1].lon]);
+        const p1 = map.latLngToContainerPoint([pts[i].lat, pts[i].lon]);
+        overlayCtx.strokeStyle = `rgba(140,220,255,${alpha})`;
+        overlayCtx.lineWidth = 2;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(p0.x, p0.y);
+        overlayCtx.lineTo(p1.x, p1.y);
+        overlayCtx.stroke();
 
       const perVal = parseFloat($("perimeter").value);
       const unit = $("perimeterUnit").value;
@@ -519,6 +1304,106 @@
         totalRoundedMins
       });
     }
+    overlayCtx.restore();
+  }
+
+  // sweep
+  if (cfg.radarSweep){
+    sweepPhase += dt / cfg.sweepSec;
+    if (sweepPhase > 1) sweepPhase -= 1;
+
+    const angle = sweepPhase * Math.PI*2;
+    const sweepWidth = Math.PI / 18;
+    const rMax = searchPx;
+
+    overlayCtx.save();
+    overlayCtx.translate(centrePx.x, centrePx.y);
+
+    const grad = overlayCtx.createRadialGradient(0,0,0, 0,0,rMax);
+    grad.addColorStop(0, "rgba(60,255,140,0.00)");
+    grad.addColorStop(0.15, "rgba(60,255,140,0.10)");
+    grad.addColorStop(0.65, "rgba(60,255,140,0.18)");
+    grad.addColorStop(1, "rgba(60,255,140,0.00)");
+
+    overlayCtx.fillStyle = grad;
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(0,0);
+    overlayCtx.arc(0,0,rMax, angle - sweepWidth, angle + sweepWidth);
+    overlayCtx.closePath();
+    overlayCtx.fill();
+
+    overlayCtx.restore();
+  }
+
+  requestAnimationFrame(drawOverlay);
+}
+
+function startPolling(){
+  stopPolling();
+  const tick = async () => {
+    try{
+      await fetchAircraft();
+    } catch (e){
+      setStatus("fetch failed", false);
+      console.warn(e);
+    }
+  };
+  tick();
+  pollTimer = setInterval(tick, cfg.pollSec * 1000);
+}
+function stopPolling(){
+  if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+}
+
+function wireUi(){
+  $("applyBtn").addEventListener("click", async () => {
+    readUiIntoCfg();
+    applyTileBrightness();
+    applyTileMode();
+    await updateCentreFromMode();
+    map.setView([centre.lat, centre.lon], map.getZoom(), { animate:false });
+    updateRings();
+    updateMeta();
+    startPolling();
+  });
+
+  $("reloadBtn").addEventListener("click", () => location.reload());
+
+  $("darkTiles").addEventListener("change", () => {
+    readUiIntoCfg();
+    applyTileMode();
+  });
+
+  $("tileBrightness").addEventListener("input", () => {
+    cfg.tileBrightness = clamp(Number($("tileBrightness").value || 0.85), 0.25, 1.35);
+    applyTileBrightness();
+  });
+
+  $("useMyLocation").addEventListener("change", async () => {
+    readUiIntoCfg();
+    await updateCentreFromMode();
+    map.setView([centre.lat, centre.lon], map.getZoom(), { animate:false });
+    updateRings();
+    updateMeta();
+  });
+}
+
+(async function main(){
+  setStatus("starting", true);
+  $("endpointText").textContent = `${WORKER_BASE}/point?lat=LAT&lon=LON&radiusNm=NM`;
+
+  await updateCentreFromMode();
+  buildMap();
+  map.setView([centre.lat, centre.lon], 9, { animate:false });
+  updateMeta();
+
+  requestAnimationFrame(drawOverlay);
+  wireUi();
+  startPolling();
+
+  setStatus("running", true);
+})();
+</script>
 
     // Restricted proximity prompt + block
     $("nearRestricted").addEventListener("change", () => {
