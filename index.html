@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="en">
-<html lang="en-GB">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -11,8 +10,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Drone Flight Time Estimato v1.3r</title>
   <style>
     :root{
       --tile-brightness: 0.85;
@@ -76,12 +73,6 @@
       background: rgba(0,0,0,0.65);
       color: rgba(255,255,255,0.92);
       font-size: 12px;
-    :root { --gap: 12px; --radius: 12px; }
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      margin: 0;
-      background: #0b0c10;
-      color: #e8e8ea;
       line-height: 1.35;
       display: none;
       box-shadow: 0 10px 24px rgba(0,0,0,0.45);
@@ -113,25 +104,12 @@
       font-size: 14px;
       font-weight: 800;
       letter-spacing: 0.25px;
-    header {
-      padding: 18px 16px;
-      background: #12131a;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
     .meta{
       font-size: 12px;
       color: var(--ui-muted);
       line-height: 1.4;
-    header h1 { margin: 0 0 6px 0; font-size: 18px; font-weight: 900; }
-    header p { margin: 0; opacity: 0.92; font-size: 13px; }
-    main { padding: 16px; max-width: 860px; margin: 0 auto; }
-    .card {
-      background: #12131a;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: var(--radius);
-      padding: 14px;
-      margin-bottom: 14px;
     }
 
     .grid{
@@ -147,21 +125,13 @@
       margin-bottom: 6px;
     }
     .field input{
-    .grid { display: grid; gap: var(--gap); grid-template-columns: 1fr; }
-    @media (min-width: 720px) { .grid.two { grid-template-columns: 1fr 1fr; } .grid.three { grid-template-columns: 1fr 1fr 1fr; } }
-    label { display: block; font-size: 13px; margin-bottom: 6px; opacity: 0.9; }
-    input[type="number"], select {
       width: 100%;
       box-sizing: border-box;
       background: rgba(0,0,0,0.45);
       border: 1px solid rgba(255,255,255,0.12);
-      padding: 12px;
       border-radius: 10px;
       padding: 10px 10px;
       color: var(--ui-text);
-      border: 1px solid rgba(255,255,255,0.14);
-      background: #0e0f14;
-      color: #e8e8ea;
       outline: none;
       font-size: 13px;
     }
@@ -172,7 +142,6 @@
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 10px;
-      box-sizing: border-box;
     }
     .toggle{
       display:flex;
@@ -180,20 +149,9 @@
       gap: 10px;
       padding: 10px;
       border-radius: 12px;
-    input[type="checkbox"] { transform: scale(1.15); }
-    .row { display: flex; gap: 10px; align-items: center; }
-    .muted { opacity: 0.75; font-size: 12px; }
-    .pill {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(0,0,0,0.35);
       user-select: none;
-      font-size: 12px;
-      margin-right: 8px;
-      margin-top: 6px;
     }
     .toggle input{ transform: scale(1.05); }
     .toggle span{ font-size: 12px; color: var(--ui-text); }
@@ -201,12 +159,6 @@
     .actions{
       display:flex;
       gap: 10px;
-    .big { font-size: 22px; font-weight: 950; margin: 6px 0 10px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th, td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
-    th { opacity: 0.8; font-weight: 750; }
-    .right { text-align: right; }
-    .warn {
       margin-top: 10px;
       flex-wrap: wrap;
       justify-content: flex-end;
@@ -215,16 +167,12 @@
       border: 1px solid rgba(255,255,255,0.14);
       background: rgba(0,0,0,0.35);
       color: var(--ui-text);
-      padding: 10px 12px;
       border-radius: 10px;
       padding: 9px 10px;
-      border: 1px solid rgba(255, 195, 0, 0.25);
-      background: rgba(255, 195, 0, 0.08);
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
       user-select: none;
-      opacity: 0.98;
     }
     .btn.primary{
       border-color: rgba(120,170,255,0.55);
@@ -236,16 +184,9 @@
       display:flex;
       justify-content: space-between;
       gap: 10px;
-    .stop {
       margin-top: 10px;
       font-size: 12px;
       color: var(--ui-muted);
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 80, 80, 0.35);
-      background: rgba(255, 80, 80, 0.10);
-      font-size: 13px;
-      display: none;
     }
     .pill{
       display:inline-flex;
@@ -253,10 +194,6 @@
       gap: 8px;
       padding: 6px 10px;
       border-radius: 999px;
-    button {
-      width: 100%;
-      padding: 12px;
-      border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.14);
       background: rgba(0,0,0,0.35);
       color: var(--ui-text);
@@ -303,13 +240,7 @@
     @media (max-width: 980px){
       #wrap { grid-template-columns: 1fr; }
       #panel { height: auto; }
-      background: rgba(255,255,255,0.10);
-      color: #e8e8ea;
-      font-weight: 850;
-      cursor: pointer;
     }
-    button:hover { background: rgba(255,255,255,0.14); }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   </style>
 </head>
 
@@ -319,17 +250,6 @@
       <div class="titlebar">Secur-IT ADS-B Tracking</div>
       <canvas id="overlay" class="overlay-canvas"></canvas>
       <div id="fatal"></div>
-  <header>
-    <h1>Drone Flight Time Estimator</h1>
-    <p><b>Estimator for flight time only.</b> This does not include pre-surveys, permissions/authorisations, setup/take-down, on-site delays, or post-mission processing.</p>
-  </header>
-
-  <main>
-    <div class="card">
-      <div class="warn">
-        Assumptions: Matrice 4DT, 60 m AGL, 9 m/s cruise, wide FOV 82°, lawnmower mapping. Battery swaps add <b>15 mins</b> per <b>38 mins</b> airborne.
-        Baseline 2D mapping is always included.
-      </div>
     </div>
 
     <div id="panel">
@@ -337,137 +257,55 @@
         <div class="panel-title">
           <span>Controls</span>
           <span class="pill" id="visiblePill">Visible: 0</span>
-    <div class="card">
-      <div class="grid two">
-        <div>
-          <label for="perimeter">Site perimeter</label>
-          <div class="grid three" style="grid-template-columns: 2fr 1fr 1fr;">
-            <input id="perimeter" type="number" min="0" step="0.01" placeholder="e.g. 2400" />
-            <select id="perimeterUnit" aria-label="Perimeter unit">
-              <option value="m">metres</option>
-              <option value="km">kilometres</option>
-            </select>
-            <button type="button" id="exampleBtn">Example</button>
-          </div>
-          <div class="muted" style="margin-top:6px;">Perimeter drives the estimate. Area is derived using the selected shape.</div>
         </div>
 
         <div class="meta" id="metaLine">
           Centre: <span id="centreText"></span><br/>
           Filters: under <span id="ceilingText"></span> ft, within <span id="searchText"></span> km, warn within <span id="warnText"></span> km<br/>
           Polling: <span id="pollText"></span>
-        <div>
-          <label for="shape">Perimeter type</label>
-          <select id="shape">
-            <option value="square" selected>Square (baseline)</option>
-            <option value="circle">Circle (largest area)</option>
-            <option value="rectangle">Rectangle (assumes 2:1)</option>
-            <option value="complex">Complex (contact UAS)</option>
-          </select>
-          <div class="muted" style="margin-top:6px;">Rectangle assumes 2:1 aspect ratio. Complex sites need a proper look.</div>
         </div>
-      </div>
 
         <div class="grid">
           <div class="field">
             <label for="ceilingFt">Max altitude (ft)</label>
             <input id="ceilingFt" type="number" min="1000" max="50000" step="500" value="30000" />
           </div>
-      <div class="grid two" style="margin-top:12px;">
-        <div>
-          <label for="complexity">Complex site, ie power lines, major road, railway etc</label>
-          <select id="complexity">
-            <option value="1" selected>Standard</option>
-            <option value="1.6">Busy</option>
-            <option value="2">Complex</option>
-          </select>
-          <div class="muted" style="margin-top:6px;">Applies a multiplier to airborne flight time (not RTK walking time).</div>
-        </div>
 
           <div class="field">
             <label for="searchKm">Search radius (km)</label>
             <input id="searchKm" type="number" min="10" max="250" step="5" value="100" />
-        <div>
-          <label>Within 5 miles of an Airport, Prison or MOD facility?</label>
-          <div class="row">
-            <input id="nearRestricted" type="checkbox" />
-            <label for="nearRestricted" style="margin:0;">Yes</label>
           </div>
-          <div class="muted" style="margin-top:6px;">If yes, you must contact UAS before proceeding.</div>
-        </div>
-      </div>
 
           <div class="field">
             <label for="warnKm">Warning radius (km)</label>
             <input id="warnKm" type="number" min="1" max="50" step="1" value="5" />
           </div>
-      <div class="stop" id="nearStop">
-        <b>Restricted proximity flag.</b><br />
-        This job may require additional checks / authorisation. Please contact the <b>UAS Department</b> before proceeding further.
-      </div>
 
           <div class="field">
             <label for="staleSec">Max stale (sec)</label>
             <input id="staleSec" type="number" min="5" max="120" step="5" value="30" />
           </div>
-      <div class="stop" id="complexStop">
-        <b>Complex site selected.</b><br />
-        This estimator is not suitable for complex geometry (multiple compounds, voids, internal boundaries, segmented work areas, etc).
-        Please contact the <b>UAS Department</b> for a proper estimate and approach.
-      </div>
-    </div>
 
           <div class="field">
             <label for="pollSec">Poll interval (sec)</label>
             <input id="pollSec" type="number" min="5" max="60" step="1" value="10" />
-    <div class="card">
-      <div class="grid two">
-        <div>
-          <div class="row">
-            <input id="hiRes3d" type="checkbox" />
-            <label for="hiRes3d" style="margin:0;">High res 3D mapping (adds 5× baseline 2D)</label>
           </div>
-          <div class="muted">Additive to baseline.</div>
-        </div>
 
           <div class="field">
             <label for="sweepSec">Radar sweep (sec)</label>
             <input id="sweepSec" type="number" min="3" max="20" step="1" value="6" />
           </div>
-        <div>
-          <label for="thermalMode">Thermal requirement</label>
-          <select id="thermalMode">
-            <option value="none" selected>None</option>
-            <option value="basic">Basic thermal (adds 2× baseline 2D)</option>
-            <option value="advanced">Advanced thermal (adds 8× baseline 2D)</option>
-          </select>
-          <div class="muted">Thermal is additive to baseline 2D.</div>
-        </div>
-      </div>
 
           <div class="field">
             <label for="tileBrightness">Map brightness</label>
             <input id="tileBrightness" type="range" min="0.25" max="1.35" step="0.05" value="0.25" />
-      <div class="grid two" style="margin-top:12px;">
-        <div>
-          <div class="row">
-            <input id="hiResPano" type="checkbox" />
-            <label for="hiResPano" style="margin:0;">High res panoramic</label>
           </div>
-          <div class="muted">Perimeter flight time plus 5 stops of 3 mins.</div>
-        </div>
 
           <div class="field">
             <label for="lookAheadSec">Heading look-ahead (sec)</label>
             <input id="lookAheadSec" type="number" min="15" max="240" step="15" value="90" />
-        <div>
-          <div class="row">
-            <input id="hiResBuilding3d" type="checkbox" />
-            <label for="hiResBuilding3d" style="margin:0;">High res 3D of a building</label>
           </div>
-          <div class="muted">Adds 7.5× baseline 2D (3D plus extra 50%).</div>
         </div>
-      </div>
 
         <div class="toggles">
           <label class="toggle"><input id="useMyLocation" type="checkbox" /><span>Use my location</span></label>
@@ -481,15 +319,7 @@
 
           <label class="toggle"><input id="timeGate" type="checkbox" checked /><span>Office hours only</span></label>
           <label class="toggle"><input id="pauseOutside" type="checkbox" checked /><span>Auto-pause outside hours</span></label>
-      <div class="grid two" style="margin-top:12px;">
-        <div>
-          <div class="row">
-            <input id="rtkWalk" type="checkbox" />
-            <label for="rtkWalk" style="margin:0;">Surgery grade mapping (RTK walk)</label>
-          </div>
-          <div class="muted">Time to walk the perimeter (separate from airborne time).</div>
         </div>
-      </div>
 
         <div class="actions">
           <button class="btn primary" id="applyBtn">Apply</button>
@@ -497,30 +327,17 @@
           <button class="btn" id="reloadBtn">Hard reload</button>
           <span class="pill" id="statusPill">Status: starting</span>
         </div>
-      <div class="warn">
-        Battery swaps are counted as <code>floor(airborne_minutes / 38)</code> and charged at <b>15 mins</b> each.
-        Total output is rounded <b>up</b> to the nearest <b>15 mins</b>.
-      </div>
-    </div>
 
         <div class="status-row">
           <div>Last update: <span id="lastUpdate">--:--:--</span></div>
           <div>Source: <span id="sourceText">Airplanes.live (via Worker)</span></div>
         </div>
-    <div class="card" id="resultsCard" aria-live="polite">
-      <div class="muted">Results</div>
-      <div class="big" id="totalTime">Enter a perimeter to calculate</div>
 
         <div class="legend">
           Colouring: <span class="g">Green</span> outside warning,
           <span class="y">Yellow</span> predicted to enter warning,
           <span class="r">Red</span> inside warning.
         </div>
-      <div>
-        <span class="pill" id="shapePill">Shape: -</span>
-        <span class="pill" id="multPill">Shape multiplier: -</span>
-        <span class="pill" id="areaPill">Area: 0 m²</span>
-        <span class="pill" id="complexityPill">Site multiplier: 1.0×</span>
       </div>
 
       <div class="card">
@@ -534,31 +351,6 @@
             Note: Airplanes.live is rate limited to 1 request/second.
           </div>
         </div>
-      <div>
-        <span class="pill" id="airbornePill">Airborne: 0 mins</span>
-        <span class="pill" id="swapPill">Swaps: 0 (0 mins)</span>
-        <span class="pill" id="rtkPill">RTK walk: 0 mins</span>
-        <span class="pill" id="roundedPill">Rounded total: -</span>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Component</th>
-            <th class="right">Time (mins)</th>
-          </tr>
-        </thead>
-        <tbody id="breakdownBody"></tbody>
-        <tfoot>
-          <tr>
-            <th>Total on-site time (rounded)</th>
-            <th class="right" id="totalMinsCell">0</th>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div class="muted" style="margin-top:10px;">
-        Reminder: flight-time estimate only, no pre-survey, setup/take-down, delays, or processing.
       </div>
     </div>
   </div>
@@ -881,85 +673,6 @@ function renderFromData(data){
       const pred = predictCrossing(lat, lon, hdg, gs, cfg.lookAheadSec);
       willEnter = pred.willEnter;
       if (pred.pEnd) pEndLL = metersToLatLon(pred.pEnd.x, pred.pEnd.y, centre.lat, centre.lon);
-  </main>
-
-  <script>
-    // Fixed assumptions
-    const ALT_M = 60;
-    const FLIGHT_SPEED_MS = 9;
-    const WIDE_FOV_DEG = 82;
-
-    // Hidden defaults (per your request)
-    const DEFAULT_SIDELAP = 0.70;     // fixed
-    const DEFAULT_WALK_MS = 1.4;      // fixed RTK walk speed
-
-    const SWAP_THRESHOLD_MIN = 38;
-    const SWAP_ALLOWANCE_MIN = 15;
-
-    const PANO_STOPS = 5;
-    const PANO_STOP_MIN = 3;
-
-    const $ = (id) => document.getElementById(id);
-
-    function clampNonNeg(x) { return isFinite(x) && x > 0 ? x : 0; }
-    function perimeterToMetres(val, unit) {
-      const v = clampNonNeg(val);
-      return v * (unit === "km" ? 1000 : 1);
-    }
-
-    // Base square area from perimeter: P^2/16
-    function areaSquareFromPerimeter(P) { return (P * P) / 16; }
-
-    // Multipliers vs square for same perimeter
-    const MULT_CIRCLE = 4 / Math.PI;     // ~1.273
-    const MULT_SQUARE = 1.0;
-    // Rectangle assumes 2:1 -> area = P^2/18 -> multiplier 16/18
-    const MULT_RECT_2_TO_1 = 16 / 18;    // ~0.889
-
-    function getShapeConfig(shape) {
-      if (shape === "circle") return { label: "circle", multiplier: MULT_CIRCLE };
-      if (shape === "rectangle") return { label: "rectangle (2:1)", multiplier: MULT_RECT_2_TO_1 };
-      return { label: "square", multiplier: MULT_SQUARE };
-    }
-
-    function swathWidthM(altM, fovDeg) {
-      const halfRad = (fovDeg * Math.PI / 180) / 2;
-      return 2 * altM * Math.tan(halfRad);
-    }
-
-    function mappingMinutesFromArea(areaM2, sidelapFrac) {
-      // Equivalent square side for area
-      const side = Math.sqrt(areaM2);
-      const swath = swathWidthM(ALT_M, WIDE_FOV_DEG);
-      const spacing = swath * (1 - sidelapFrac);
-
-      const lines = Math.max(1, Math.ceil(side / spacing));
-      const pathM = (lines * side); // raw path length, before site multiplier
-
-      const seconds = pathM / FLIGHT_SPEED_MS;
-      return seconds / 60;
-    }
-
-    function perimeterFlightMinutes(P) {
-      const seconds = P / FLIGHT_SPEED_MS;
-      return seconds / 60;
-    }
-
-    function roundUpToNearest(mins, step) {
-      const m = Math.max(0, mins);
-      return Math.ceil(m / step) * step;
-    }
-
-    function formatDuration(minsInt) {
-      const mins = Math.round(minsInt);
-      if (mins < 60) return `${mins} mins`;
-
-      const h = Math.floor(mins / 60);
-      const rem = mins % 60;
-
-      const hLabel = h === 1 ? "1 hour" : `${h} hours`;
-      if (rem === 0) return hLabel;
-      return `${hLabel} ${rem} mins`;
     }
 
     const colour = insideWarn ? "red" : (willEnter ? "yellow" : "green");
@@ -980,65 +693,26 @@ function renderFromData(data){
         if (el){
           el.classList.add("ac-dot", colour);
         }
-    function setBlocked(blocked) {
-      // Grey out results and prevent interaction with most inputs
-      $("resultsCard").style.opacity = blocked ? "0.45" : "1";
-      $("resultsCard").style.pointerEvents = blocked ? "none" : "auto";
-
-      // Disable all controls except the checkbox that clears the block
-      const controls = ["perimeter","perimeterUnit","shape","complexity","hiRes3d","thermalMode","hiResPano","hiResBuilding3d","rtkWalk","exampleBtn"];
-      controls.forEach(id => {
-        const el = $(id);
-        if (!el) return;
-        el.disabled = blocked;
       });
 
       rec = { marker: cm, label: null, vector: null, lastSeenMs: nowMs, trail: [] };
       acByHex.set(hex, rec);
-      // Allow unchecking to clear
-      $("nearRestricted").disabled = false;
     }
 
     rec.lastSeenMs = nowMs;
     rec.trail.push({ lat, lon, ts: nowMs });
     if (rec.trail.length > 60) rec.trail.splice(0, rec.trail.length - 60);
-    function renderEmpty() {
-      $("totalTime").textContent = "Enter a perimeter to calculate";
-      $("shapePill").textContent = "Shape: -";
-      $("multPill").textContent = "Shape multiplier: -";
-      $("areaPill").textContent = "Area: 0 m²";
-      $("complexityPill").textContent = "Site multiplier: 1.0×";
-      $("airbornePill").textContent = "Airborne: 0 mins";
-      $("swapPill").textContent = "Swaps: 0 (0 mins)";
-      $("rtkPill").textContent = "RTK walk: 0 mins";
-      $("roundedPill").textContent = "Rounded total: -";
-      $("breakdownBody").innerHTML = "";
-      $("totalMinsCell").textContent = "0";
-    }
 
     rec.marker.setLatLng([lat, lon]);
     rec.marker.setStyle({
       color: colour === "green" ? "rgba(51,255,102,0.95)" : colour === "yellow" ? "rgba(255,226,74,0.98)" : "rgba(255,43,43,0.98)",
       fillColor: colour === "green" ? "rgba(51,255,102,1)" : colour === "yellow" ? "rgba(255,226,74,1)" : "rgba(255,43,43,1)"
     });
-    function renderResults({shapeLabel, shapeMult, areaM2, siteMult, airborneMins, swaps, swapMins, rtkMins, totalRawMins, totalRoundedMins}) {
-      $("shapePill").textContent = `Shape: ${shapeLabel}`;
-      $("multPill").textContent = `Shape multiplier: ${shapeMult.toFixed(3)}`;
-      $("areaPill").textContent = `Area: ${Math.round(areaM2).toLocaleString("en-GB")} m²`;
-      $("complexityPill").textContent = `Site multiplier: ${siteMult}×`;
-
-      $("airbornePill").textContent = `Airborne: ${Math.round(airborneMins)} mins`;
-      $("swapPill").textContent = `Swaps: ${swaps} (${swapMins} mins)`;
-      $("rtkPill").textContent = `RTK walk: ${Math.round(rtkMins)} mins`;
 
     const el = rec.marker.getElement();
     if (el){
       el.classList.remove("green","yellow","red");
       el.classList.add(colour);
-      $("roundedPill").textContent = `Rounded total: ${formatDuration(totalRoundedMins)}`;
-      $("totalTime").textContent = `${formatDuration(totalRoundedMins)} (rounded up)`;
-
-      $("totalMinsCell").textContent = `${totalRoundedMins}`;
     }
 
     // vector
@@ -1052,20 +726,11 @@ function renderFromData(data){
           opacity: 1,
           dashArray: "6 6"
         }).addTo(vectorLayer);
-    function calc() {
-      // Restricted proximity block
-      if ($("nearRestricted").checked) {
-        $("nearStop").style.display = "block";
-        $("complexStop").style.display = "none";
-        setBlocked(true);
-        return;
       } else {
         rec.vector.setLatLngs([start, end]);
         rec.vector.setStyle({
           color: colour === "green" ? "rgba(51,255,102,0.55)" : colour === "yellow" ? "rgba(255,226,74,0.65)" : "rgba(255,43,43,0.70)"
         });
-        $("nearStop").style.display = "none";
-        setBlocked(false);
       }
     } else if (rec.vector){
       vectorLayer.removeLayer(rec.vector);
@@ -1096,16 +761,9 @@ function renderFromData(data){
 
       if (!rec.label){
         rec.label = L.marker([lat, lon], { icon, interactive:false }).addTo(labelLayer);
-      const shape = $("shape").value;
-
-      if (shape === "complex") {
-        $("complexStop").style.display = "block";
-        renderEmpty();
-        return;
       } else {
         rec.label.setLatLng([lat, lon]);
         rec.label.setIcon(icon);
-        $("complexStop").style.display = "none";
       }
     } else if (rec.label){
       labelLayer.removeLayer(rec.label);
@@ -1193,116 +851,7 @@ function drawOverlay(ts){
         overlayCtx.moveTo(p0.x, p0.y);
         overlayCtx.lineTo(p1.x, p1.y);
         overlayCtx.stroke();
-
-      const perVal = parseFloat($("perimeter").value);
-      const unit = $("perimeterUnit").value;
-      const P = perimeterToMetres(perVal, unit);
-
-      if (!P) { renderEmpty(); return; }
-
-      const siteMult = parseFloat($("complexity").value) || 1;
-
-      const cfg = getShapeConfig(shape);
-      const baseSquareArea = areaSquareFromPerimeter(P);
-      const areaM2 = baseSquareArea * cfg.multiplier;
-
-      // Baseline 2D always included
-      const base2DRaw = mappingMinutesFromArea(areaM2, DEFAULT_SIDELAP);
-
-      // Build airborne components (raw, then site multiplier applied)
-      const components = [];
-
-      components.push({ name: "Baseline 2D mapping (area-based)", mins: base2DRaw, airborne: true });
-
-      if ($("hiRes3d").checked) components.push({ name: "High res 3D mapping (adds 5× baseline 2D)", mins: base2DRaw * 5, airborne: true });
-
-      const thermalMode = $("thermalMode").value;
-      if (thermalMode === "basic") components.push({ name: "Basic thermal (adds 2× baseline 2D)", mins: base2DRaw * 2, airborne: true });
-      if (thermalMode === "advanced") components.push({ name: "Advanced thermal (adds 8× baseline 2D)", mins: base2DRaw * 8, airborne: true });
-
-      if ($("hiResBuilding3d").checked) components.push({ name: "High res building 3D (adds 7.5× baseline 2D)", mins: base2DRaw * 7.5, airborne: true });
-
-      if ($("hiResPano").checked) {
-        const panoRaw = perimeterFlightMinutes(P) + (PANO_STOPS * PANO_STOP_MIN);
-        components.push({ name: `High res panoramic (perimeter + ${PANO_STOPS} stops)`, mins: panoRaw, airborne: true });
       }
-
-      // Apply site multiplier to airborne mins
-      const airborneRawMins = components.filter(c => c.airborne).reduce((a, c) => a + c.mins, 0);
-      const airborneMins = airborneRawMins * siteMult;
-
-      // Battery swaps based on multiplied airborne time
-      const swaps = Math.floor(airborneMins / SWAP_THRESHOLD_MIN);
-      const swapMins = swaps * SWAP_ALLOWANCE_MIN;
-
-      // RTK walking time (not multiplied)
-      let rtkMins = 0;
-      if ($("rtkWalk").checked) {
-        rtkMins = (P / DEFAULT_WALK_MS) / 60;
-      }
-
-      // Total raw on-site minutes (airborne + swaps + walk)
-      const totalRawMins = airborneMins + swapMins + rtkMins;
-
-      // Round up to nearest 15
-      const totalRoundedMins = roundUpToNearest(totalRawMins, 15);
-
-      // Render breakdown (simple mins, not rounded to 15 each)
-      const tbody = $("breakdownBody");
-      tbody.innerHTML = "";
-
-      // Components (show mins after site multiplier to keep it honest)
-      components.forEach(c => {
-        const minsAdj = c.airborne ? (c.mins * siteMult) : c.mins;
-        const tr = document.createElement("tr");
-        const td1 = document.createElement("td");
-        const td2 = document.createElement("td");
-        td1.textContent = c.airborne ? `${c.name} (×${siteMult})` : c.name;
-        td2.textContent = `${Math.round(minsAdj)}`;
-        td2.className = "right";
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tbody.appendChild(tr);
-      });
-
-      // Swaps row
-      {
-        const tr = document.createElement("tr");
-        const td1 = document.createElement("td");
-        const td2 = document.createElement("td");
-        td1.textContent = "Battery swap allowance";
-        td2.textContent = `${swapMins}`;
-        td2.className = "right";
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tbody.appendChild(tr);
-      }
-
-      // RTK row if used
-      if ($("rtkWalk").checked) {
-        const tr = document.createElement("tr");
-        const td1 = document.createElement("td");
-        const td2 = document.createElement("td");
-        td1.textContent = "RTK perimeter walk";
-        td2.textContent = `${Math.round(rtkMins)}`;
-        td2.className = "right";
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tbody.appendChild(tr);
-      }
-
-      renderResults({
-        shapeLabel: cfg.label,
-        shapeMult: cfg.multiplier,
-        areaM2,
-        siteMult,
-        airborneMins,
-        swaps,
-        swapMins,
-        rtkMins,
-        totalRawMins,
-        totalRoundedMins
-      });
     }
     overlayCtx.restore();
   }
@@ -1404,37 +953,5 @@ function wireUi(){
   setStatus("running", true);
 })();
 </script>
-
-    // Restricted proximity prompt + block
-    $("nearRestricted").addEventListener("change", () => {
-      if ($("nearRestricted").checked) {
-        alert("This site may be within 5 miles of an Airport, Prison, or MOD facility.\n\nContact the UAS Department before proceeding further.");
-      }
-      calc();
-    });
-
-    // Wire up events
-    ["perimeter","perimeterUnit","shape","complexity","hiRes3d","thermalMode","hiResPano","hiResBuilding3d","rtkWalk"]
-      .forEach(id => $(id).addEventListener("input", calc));
-
-    $("exampleBtn").addEventListener("click", () => {
-      $("perimeter").value = 2400;
-      $("perimeterUnit").value = "m";
-      $("shape").value = "square";
-      $("complexity").value = "1.6";
-      $("nearRestricted").checked = false;
-
-      // All tick boxes default off by design, but for the example, show a realistic combination:
-      $("hiRes3d").checked = true;
-      $("thermalMode").value = "basic";
-      $("hiResPano").checked = true;
-      $("hiResBuilding3d").checked = false;
-      $("rtkWalk").checked = true;
-
-      calc();
-    });
-
-    renderEmpty();
-  </script>
 </body>
 </html>
